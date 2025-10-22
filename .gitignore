@@ -1,6 +1,5 @@
 node_modules/
 dist/
-example
 example/node_modules/
 example/dist/
 .DS_Store
