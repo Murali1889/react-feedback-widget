@@ -1,11 +1,12 @@
-import React, { 
-  createContext, 
-  useContext, 
-  useState, 
-  useEffect, 
-  useCallback, 
-  useRef 
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef
 } from 'react';
+import { createPortal } from 'react-dom';
 import { FeedbackModal } from './FeedbackModal.jsx';
 import { getElementInfo, captureElementScreenshot } from './utils.js';
 
@@ -49,7 +50,7 @@ export const FeedbackProvider = ({
 
   useEffect(() => {
     if (!onSubmit || typeof onSubmit !== 'function') {
-      console.error('FeedbackProvider requires an onSubmit function prop');
+      // onSubmit function is required
     }
   }, [onSubmit]);
 
@@ -112,7 +113,6 @@ export const FeedbackProvider = ({
       setScreenshot(screenshotData);
       setIsModalOpen(true);
     } catch (error) {
-      console.error('Failed to capture screenshot:', error);
       setIsModalOpen(true);
     } finally {
       setIsCapturing(false);
@@ -168,7 +168,6 @@ export const FeedbackProvider = ({
       setScreenshot(null);
       setHoveredElement(null);
     } catch (error) {
-      console.error('Error in feedback submission:', error);
       throw error;
     }
   }, [onSubmit]);
@@ -183,7 +182,7 @@ export const FeedbackProvider = ({
     <FeedbackContext.Provider value={{ isActive, setIsActive }}>
       {children}
 
-      {isActive && (
+      {isActive && createPortal(
         <>
           <div ref={overlayRef} className="feedback-overlay" />
 
@@ -201,7 +200,8 @@ export const FeedbackProvider = ({
               </div>
             </>
           )}
-        </>
+        </>,
+        document.body
       )}
 
       <FeedbackModal

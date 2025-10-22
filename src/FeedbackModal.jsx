@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Send, Loader, CheckCircle } from 'lucide-react';
 
 export const FeedbackModal = ({
@@ -47,7 +48,6 @@ export const FeedbackModal = ({
         setFeedback('');
       }, 1500);
     } catch (error) {
-      console.error('Error submitting feedback:', error);
       setIsSubmitting(false);
     }
   };
@@ -61,7 +61,7 @@ export const FeedbackModal = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <>
       <div className="feedback-backdrop" onClick={onClose} />
       <div className="feedback-modal">
@@ -73,64 +73,73 @@ export const FeedbackModal = ({
             </button>
           </div>
 
-          {screenshot && (
-            <div className="feedback-screenshot">
-              <img
-                src={screenshot}
-                alt="Element screenshot"
-                className="feedback-screenshot-img"
-              />
+          <div className="feedback-body">
+            {/* Left side - Screenshot */}
+            {screenshot && (
+              <div className="feedback-screenshot-container">
+                <div className="feedback-screenshot">
+                  <img
+                    src={screenshot}
+                    alt="Element screenshot"
+                    className="feedback-screenshot-img"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Right side - Form */}
+            <div className="feedback-form-container">
+              <div className="feedback-form">
+                <label className="feedback-label">Your Feedback</label>
+                <textarea
+                  ref={textareaRef}
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Describe the issue or suggestion..."
+                  className="feedback-textarea"
+                  rows={12}
+                  disabled={isSubmitting || isSubmitted}
+                />
+              </div>
+
+              <div className="feedback-actions">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="feedback-btn feedback-cancel"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!feedback.trim() || isSubmitting || isSubmitted}
+                  className="feedback-btn feedback-submit"
+                >
+                  {isSubmitted ? (
+                    <>
+                      <CheckCircle size={16} />
+                      Submitted!
+                    </>
+                  ) : isSubmitting ? (
+                    <>
+                      <Loader size={16} className="feedback-loading" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Submit Feedback
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          )}
-
-          <div className="feedback-form">
-            <label className="feedback-label">Your Feedback</label>
-            <textarea
-              ref={textareaRef}
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Describe the issue or suggestion..."
-              className="feedback-textarea"
-              rows={4}
-              disabled={isSubmitting || isSubmitted}
-            />
-          </div>
-
-          <div className="feedback-actions">
-            <button
-              type="button"
-              onClick={onClose}
-              className="feedback-btn feedback-cancel"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!feedback.trim() || isSubmitting || isSubmitted}
-              className="feedback-btn feedback-submit"
-            >
-              {isSubmitted ? (
-                <>
-                  <CheckCircle size={16} />
-                  Submitted!
-                </>
-              ) : isSubmitting ? (
-                <>
-                  <Loader size={16} className="feedback-loading" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  Submit Feedback
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 };

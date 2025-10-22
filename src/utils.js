@@ -60,22 +60,34 @@ export const getElementInfo = (element) => {
 };
 
 export const captureElementScreenshot = async (element) => {
-  const html2canvas = (await import('html2canvas')).default;
-  
-  const canvas = await html2canvas(element, {
-    backgroundColor: null,
-    scale: window.devicePixelRatio || 2,
-    useCORS: true,
-    logging: false,
-    allowTaint: true,
-    foreignObjectRendering: false,
-    imageTimeout: 0,
-    removeContainer: true,
-    scrollX: 0,
-    scrollY: -window.scrollY,
-    windowWidth: element.scrollWidth,
-    windowHeight: element.scrollHeight,
-  });
-  
-  return canvas.toDataURL('image/png');
+  try {
+    const { toPng } = await import('html-to-image');
+
+    const options = {
+      quality: 1,
+      pixelRatio: 2,
+      cacheBust: true,
+      style: {
+        transform: 'none',
+        transformOrigin: 'top left'
+      }
+    };
+
+    const dataUrl = await toPng(element, options);
+    return dataUrl;
+  } catch (error) {
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(element, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false
+      });
+      return canvas.toDataURL('image/png');
+    } catch (fallbackError) {
+      throw fallbackError;
+    }
+  }
 };

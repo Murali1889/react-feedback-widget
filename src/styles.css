@@ -5,9 +5,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.05);
   z-index: 999998;
   cursor: crosshair;
+  pointer-events: none;
 }
 
 /* Highlight */
@@ -55,8 +56,9 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1000002;
-  max-width: 500px;
-  width: 90%;
+  max-width: 1200px;
+  width: 95%;
+  max-height: 90vh;
   animation: slideUp 0.3s ease;
 }
 
@@ -65,6 +67,9 @@
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
 }
 
 .feedback-header {
@@ -101,22 +106,84 @@
   color: #111827;
 }
 
+/* Two-column body layout */
+.feedback-body {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  overflow: auto;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Left side - Screenshot container */
+.feedback-screenshot-container {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .feedback-screenshot {
-  margin-bottom: 20px;
   border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e5e7eb;
-  max-height: 300px;
+  overflow: auto;
+  border: 2px solid #e5e7eb;
+  background: #ffffff;
+  max-height: 500px;
+  width: 100%;
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .feedback-screenshot-img {
   width: 100%;
+  height: auto;
   display: block;
-  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* Right side - Form container */
+.feedback-form-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
 }
 
 .feedback-form {
-  margin-bottom: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .feedback-modal {
+    max-width: 95%;
+    width: 95%;
+  }
+
+  .feedback-body {
+    flex-direction: column;
+  }
+
+  .feedback-screenshot-container {
+    flex: none;
+    max-height: 300px;
+  }
+
+  .feedback-screenshot {
+    max-height: 300px;
+  }
+
+  .feedback-form-container {
+    min-width: 0;
+  }
+
+  .feedback-modal-content {
+    padding: 16px;
+  }
 }
 
 .feedback-label {
@@ -129,6 +196,7 @@
 
 .feedback-textarea {
   width: 100%;
+  flex: 1;
   padding: 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -137,6 +205,7 @@
   resize: vertical;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
+  min-height: 200px;
 }
 
 .feedback-textarea:focus {

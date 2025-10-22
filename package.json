@@ -1,6 +1,6 @@
 {
-  "name": "murali-feedback-widget-react",
-  "version": "1.0.4",
+  "name": "react-visual-feedback",
+  "version": "1.1.1",
   "description": "A visual feedback widget for React applications with element selection and screenshot capture",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -30,6 +30,7 @@
     "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
   },
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.263.1"
   },
