@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { FeedbackModal } from './FeedbackModal.jsx';
+import { FeedbackDashboard, saveFeedbackToLocalStorage } from './FeedbackDashboard.jsx';
 import { getElementInfo, captureElementScreenshot } from './utils.js';
 
 const FeedbackContext = createContext(null);
@@ -16,7 +17,15 @@ export const FeedbackProvider = ({
   children,
   onSubmit,
   isActive: controlledIsActive,
-  onActiveChange
+  onActiveChange,
+  dashboard = false,
+  dashboardData,
+  isDeveloper = false,
+  isUser = true,
+  userName,
+  userEmail,
+  onStatusChange,
+  mode = 'light'
 }) => {
   const [internalIsActive, setInternalIsActive] = useState(false);
 
@@ -44,6 +53,7 @@ export const FeedbackProvider = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [screenshot, setScreenshot] = useState(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
 
   const overlayRef = useRef(null);
   const highlightRef = useRef(null);
@@ -121,11 +131,19 @@ export const FeedbackProvider = ({
   }, [isActive, hoveredElement]);
 
   const handleKeyDown = useCallback((e) => {
-    if (e.ctrlKey && e.key.toLowerCase() === 'q') {
+    // Ctrl + Q to activate feedback mode
+    if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'q') {
       e.preventDefault();
       if (!isActive) {
         setIsActive(true);
       }
+      return;
+    }
+
+    // Ctrl + Shift + Q to open dashboard (only if dashboard prop is enabled)
+    if (dashboard && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') {
+      e.preventDefault();
+      setIsDashboardOpen(true);
       return;
     }
 
@@ -135,18 +153,35 @@ export const FeedbackProvider = ({
         setIsActive(false);
         setIsModalOpen(false);
       }
+      if (isDashboardOpen) {
+        setIsDashboardOpen(false);
+      }
     }
-  }, [isActive]);
+  }, [isActive, isDashboardOpen, dashboard]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Add/remove body class and disable page interactions when feedback mode is active
+  useEffect(() => {
+    if (isActive) {
+      document.body.classList.add('feedback-mode-active');
+    } else {
+      document.body.classList.remove('feedback-mode-active');
+    }
+
+    return () => {
+      document.body.classList.remove('feedback-mode-active');
+    };
+  }, [isActive]);
+
   useEffect(() => {
     if (!isActive) {
       setHoveredElement(null);
       setSelectedElement(null);
+      setIsModalOpen(false); // Close modal when isActive becomes false
       return;
     }
 
@@ -161,7 +196,19 @@ export const FeedbackProvider = ({
 
   const handleFeedbackSubmit = useCallback(async (feedbackData) => {
     try {
-      await onSubmit(feedbackData);
+      // If dashboard is enabled, use localStorage
+      if (dashboard) {
+        const result = saveFeedbackToLocalStorage(feedbackData);
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+      }
+
+      // Also call onSubmit if provided
+      if (onSubmit && typeof onSubmit === 'function') {
+        await onSubmit(feedbackData);
+      }
+
       setIsModalOpen(false);
       setIsActive(false);
       setSelectedElement(null);
@@ -170,7 +217,7 @@ export const FeedbackProvider = ({
     } catch (error) {
       throw error;
     }
-  }, [onSubmit]);
+  }, [onSubmit, dashboard]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
@@ -178,22 +225,24 @@ export const FeedbackProvider = ({
     setScreenshot(null);
   }, []);
 
+  const themeClass = mode === 'dark' ? 'feedback-dark' : 'feedback-light';
+
   return (
-    <FeedbackContext.Provider value={{ isActive, setIsActive }}>
+    <FeedbackContext.Provider value={{ isActive, setIsActive, setIsDashboardOpen }}>
       {children}
 
       {isActive && createPortal(
         <>
-          <div ref={overlayRef} className="feedback-overlay" />
+          <div ref={overlayRef} className={`feedback-overlay ${themeClass}`} />
 
           {hoveredElement && (
             <>
               <div
                 ref={highlightRef}
-                className="feedback-highlight"
+                className={`feedback-highlight ${themeClass}`}
                 style={highlightStyle}
               />
-              <div className="feedback-tooltip" style={tooltipStyle}>
+              <div className={`feedback-tooltip ${themeClass}`} style={tooltipStyle}>
                 {hoveredElement.tagName.toLowerCase()}
                 {hoveredElement.id && `#${hoveredElement.id}`}
                 {isCapturing && ' (Capturing...)'}
@@ -210,7 +259,21 @@ export const FeedbackProvider = ({
         elementInfo={selectedElement ? getElementInfo(selectedElement) : null}
         screenshot={screenshot}
         onSubmit={handleFeedbackSubmit}
+        userName={userName}
+        userEmail={userEmail}
+        mode={mode}
       />
+
+      {dashboard && (
+        <FeedbackDashboard
+          isOpen={isDashboardOpen}
+          onClose={() => setIsDashboardOpen(false)}
+          data={dashboardData}
+          isDeveloper={isDeveloper}
+          isUser={isUser}
+          onStatusChange={onStatusChange}
+        />
+      )}
     </FeedbackContext.Provider>
   );
 };

@@ -1,22 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, Loader, CheckCircle } from 'lucide-react';
+import { X, Send, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 
 export const FeedbackModal = ({
   isOpen,
   onClose,
   elementInfo,
   screenshot,
-  onSubmit
+  onSubmit,
+  userName,
+  userEmail,
+  mode = 'dark'
 }) => {
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState(null);
   const textareaRef = useRef(null);
 
+  // Reset states when modal opens/closes
   useEffect(() => {
-    if (isOpen && textareaRef.current) {
-      textareaRef.current.focus();
+    if (isOpen) {
+      // Focus textarea when opening
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    } else {
+      // Reset all states when closing
+      setFeedback('');
+      setIsSubmitting(false);
+      setIsSubmitted(false);
+      setError(null);
     }
   }, [isOpen]);
 
@@ -24,6 +38,7 @@ export const FeedbackModal = ({
     if (!feedback.trim()) return;
 
     setIsSubmitting(true);
+    setError(null);
 
     const feedbackData = {
       feedback: feedback.trim(),
@@ -35,19 +50,23 @@ export const FeedbackModal = ({
         width: window.innerWidth,
         height: window.innerHeight
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      userName: userName || 'Anonymous',
+      userEmail: userEmail || null
     };
 
     try {
       await onSubmit(feedbackData);
       setIsSubmitted(true);
+      setIsSubmitting(false);
+      setError(null);
 
       setTimeout(() => {
         onClose();
-        setIsSubmitted(false);
-        setFeedback('');
       }, 1500);
-    } catch (error) {
+    } catch (err) {
+      console.error('[React Feedback Widget] Submission failed:', err);
+      setError(err?.message || 'Failed to submit feedback. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -61,14 +80,19 @@ export const FeedbackModal = ({
 
   if (!isOpen) return null;
 
+  const themeClass = mode === 'dark' ? 'feedback-dark' : 'feedback-light';
+
   return createPortal(
     <>
-      <div className="feedback-backdrop" onClick={onClose} />
-      <div className="feedback-modal">
+      <div className={`feedback-backdrop ${themeClass}`} onClick={onClose} />
+      <div className={`feedback-modal ${themeClass}`}>
         <div className="feedback-modal-content">
           <div className="feedback-header">
-            <h3 className="feedback-title">Help Us Improve ❤️</h3>
-            <button onClick={onClose} className="feedback-close">
+            <div className="feedback-title-wrapper">
+              <h3 className="feedback-title">Share Your Feedback</h3>
+              <p className="feedback-subtitle">Help us improve your experience</p>
+            </div>
+            <button onClick={onClose} className="feedback-close" aria-label="Close">
               <X size={20} />
             </button>
           </div>
@@ -77,6 +101,7 @@ export const FeedbackModal = ({
             {/* Left side - Screenshot */}
             {screenshot && (
               <div className="feedback-screenshot-container">
+                <label className="feedback-screenshot-label">Screenshot Preview</label>
                 <div className="feedback-screenshot">
                   <img
                     src={screenshot}
@@ -90,17 +115,30 @@ export const FeedbackModal = ({
             {/* Right side - Form */}
             <div className="feedback-form-container">
               <div className="feedback-form">
-                <label className="feedback-label">Your Feedback</label>
+                <label className="feedback-label">
+                  Your Feedback
+                  <span className="feedback-required">*</span>
+                </label>
                 <textarea
                   ref={textareaRef}
                   value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
+                  onChange={(e) => {
+                    setFeedback(e.target.value);
+                    if (error) setError(null);
+                  }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Describe the issue or suggestion..."
+                  placeholder="Tell us what you think... (Ctrl/Cmd + Enter to submit)"
                   className="feedback-textarea"
                   rows={12}
                   disabled={isSubmitting || isSubmitted}
+                  aria-invalid={error ? 'true' : 'false'}
                 />
+                {error && (
+                  <div className="feedback-error" role="alert">
+                    <AlertCircle size={16} />
+                    <span>{error}</span>
+                  </div>
+                )}
               </div>
 
               <div className="feedback-actions">

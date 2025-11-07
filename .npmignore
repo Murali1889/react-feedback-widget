@@ -1,7 +1,30 @@
+# Source files
 src/
-rollup.config.js
-.gitignore
-*.log
-.DS_Store
-test/
+example/
 examples/
+
+# Build config
+rollup.config.js
+.babelrc
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Development files
+node_modules/
+.DS_Store
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Testing
+test/
+coverage/

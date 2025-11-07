@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FeedbackProvider, useFeedback } from '../../dist/index.esm.js';
+import { FeedbackProvider, useFeedback, FeedbackDashboard, FeedbackUpdatesNotification } from '../../dist/index.esm.js';
 import '../../dist/index.css';
+import { dummyFeedbackData, dummyUpdatesData } from './dummyData';
 
 function DarkModeToggle() {
   const [darkMode, setDarkMode] = useState(false);
@@ -31,39 +32,123 @@ function DarkModeToggle() {
   );
 }
 
-function FeedbackButton() {
-  const { isActive, setIsActive } = useFeedback();
-
+function DeveloperModeToggle({ isDeveloper, onToggle }) {
   return (
     <button
-      onClick={() => setIsActive(!isActive)}
-      className={`fixed bottom-6 right-6 px-6 py-4 rounded-lg font-bold shadow-2xl z-[1000] transition-all hover:-translate-y-1 ${
-        isActive
-          ? 'bg-red-500 hover:bg-red-600 text-white'
-          : 'bg-blue-500 hover:bg-blue-600 text-white'
-      }`}
+      onClick={onToggle}
+      className="fixed top-4 right-20 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hover:scale-105 transition-transform z-[1000] text-sm font-semibold"
     >
-      {isActive ? '✕ Cancel Feedback' : '💬 Report Issue'}
+      {isDeveloper ? '👨‍💻 Developer Mode' : '👤 User Mode'}
     </button>
   );
 }
 
+function FeedbackButton({ onOpenDevDashboard, onOpenUserDashboard, onOpenNotifications }) {
+  const { isActive, setIsActive, setIsDashboardOpen } = useFeedback();
+
+  return (
+    <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[1000]">
+      <button
+        onClick={onOpenNotifications}
+        className="px-6 py-4 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
+      >
+        🔔 Updates (5)
+      </button>
+      <button
+        onClick={onOpenDevDashboard}
+        className="px-6 py-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
+      >
+        👨‍💻 Dev Dashboard
+      </button>
+      <button
+        onClick={onOpenUserDashboard}
+        className="px-6 py-4 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
+      >
+        👤 User Dashboard
+      </button>
+      <button
+        onClick={() => setIsDashboardOpen(true)}
+        className="px-6 py-4 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
+      >
+        📊 Live Dashboard
+      </button>
+      <button
+        onClick={() => setIsActive(!isActive)}
+        className={`px-6 py-4 rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1 ${
+          isActive
+            ? 'bg-red-500 hover:bg-red-600 text-white'
+            : 'bg-blue-500 hover:bg-blue-600 text-white'
+        }`}
+      >
+        {isActive ? '✕ Cancel Feedback' : '💬 Report Issue'}
+      </button>
+    </div>
+  );
+}
+
 function App() {
+  const [isDeveloper, setIsDeveloper] = useState(true);
+
+  // State for custom dashboards with dummy data
+  const [showDevDashboard, setShowDevDashboard] = useState(false);
+  const [showUserDashboard, setShowUserDashboard] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [updates, setUpdates] = useState(dummyUpdatesData);
+  const [feedbackData, setFeedbackData] = useState(dummyFeedbackData);
+
   const handleFeedbackSubmit = async (feedbackData) => {
     console.log('=== Feedback Submitted ===');
     console.log('Feedback:', feedbackData.feedback);
     console.log('Element Info:', feedbackData.elementInfo);
     console.log('Screenshot:', feedbackData.screenshot ? 'Captured' : 'Not captured');
     console.log('========================');
+    console.log(feedbackData)
 
     await new Promise(resolve => setTimeout(resolve, 1000));
-    alert('✅ Feedback submitted successfully!');
+  };
+
+  const handleStatusChange = ({ id, status, comment }) => {
+    console.log('=== Status Changed ===');
+    console.log('Feedback ID:', id);
+    console.log('New Status:', status);
+    console.log('Developer Comment:', comment || '(no comment)');
+    console.log('=====================');
+
+    // Update the dummy data
+    setFeedbackData(prev => prev.map(item =>
+      item.id === id ? {
+        ...item,
+        status,
+        // If there's a comment, update the responseMessage
+        ...(comment && { responseMessage: comment })
+      } : item
+    ));
+  };
+
+  const handleDismissUpdate = (updateId) => {
+    console.log('Dismissed update:', updateId);
+    setUpdates(prev => prev.filter(u => u.id !== updateId));
+  };
+
+  const handleDismissAll = () => {
+    console.log('Dismissed all updates');
+    setUpdates([]);
+    setShowNotifications(false);
   };
 
   return (
-    <FeedbackProvider onSubmit={handleFeedbackSubmit}>
+    <FeedbackProvider
+      onSubmit={handleFeedbackSubmit}
+      onStatusChange={handleStatusChange}
+      dashboard={true}
+      isDeveloper={isDeveloper}
+      isUser={!isDeveloper}
+      userName="Test User"
+      userEmail="test@example.com"
+    >
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <DarkModeToggle />
+        <DeveloperModeToggle isDeveloper={isDeveloper} onToggle={() => setIsDeveloper(!isDeveloper)} />
 
         <header className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-16 text-center">
           <div className="max-w-6xl mx-auto px-6">
@@ -75,9 +160,52 @@ function App() {
         <main className="py-12">
           <div className="max-w-6xl mx-auto px-6 space-y-8">
 
+            {/* Demo Dashboards */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 shadow-xl text-white">
+              <h2 className="text-3xl font-bold mb-6">🎮 Demo Dashboards</h2>
+              <p className="text-lg opacity-90 mb-6">
+                Click the buttons on the right to test different views with pre-loaded dummy data:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                  <div className="text-4xl mb-3">👨‍💻</div>
+                  <h3 className="text-xl font-bold mb-2">Developer Dashboard</h3>
+                  <p className="text-sm opacity-90 mb-4">Full control with status management, delete options, and technical details. Contains 7 feedback items.</p>
+                  <button
+                    onClick={() => setShowDevDashboard(true)}
+                    className="w-full px-4 py-2 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Open Dev Dashboard
+                  </button>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                  <div className="text-4xl mb-3">👤</div>
+                  <h3 className="text-xl font-bold mb-2">User Dashboard</h3>
+                  <p className="text-sm opacity-90 mb-4">Simplified view for regular users. Shows status and developer responses. Filter by status.</p>
+                  <button
+                    onClick={() => setShowUserDashboard(true)}
+                    className="w-full px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Open User Dashboard
+                  </button>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                  <div className="text-4xl mb-3">🔔</div>
+                  <h3 className="text-xl font-bold mb-2">Update Notifications</h3>
+                  <p className="text-sm opacity-90 mb-4">Shows users updates on their feedback. Contains 5 updates grouped by status.</p>
+                  <button
+                    onClick={() => setShowNotifications(true)}
+                    className="w-full px-4 py-2 bg-white text-yellow-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Open Notifications
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* How to Test */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">How to Test</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">How to Test Live Feedback</h2>
               <ol className="space-y-4">
                 <li className="flex items-start text-gray-600 dark:text-gray-300">
                   <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">1</span>
@@ -97,7 +225,11 @@ function App() {
                 </li>
                 <li className="flex items-start text-gray-600 dark:text-gray-300">
                   <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">5</span>
-                  <span>Check console for feedback data</span>
+                  <span>Click "Live Dashboard" or press <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">Ctrl+Shift+Q</kbd> to view all feedback</span>
+                </li>
+                <li className="flex items-start text-gray-600 dark:text-gray-300">
+                  <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">6</span>
+                  <span>Toggle between Developer and User mode (top right) to see different dashboard views</span>
                 </li>
               </ol>
             </div>
@@ -105,18 +237,22 @@ function App() {
             {/* Keyboard Shortcuts */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">⌨️ Keyboard Shortcuts</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
                   <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Ctrl+Q</kbd>
-                  <span className="text-gray-600 dark:text-gray-300">Activate</span>
+                  <span className="text-gray-600 dark:text-gray-300">Activate Feedback</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Ctrl+Shift+Q</kbd>
+                  <span className="text-gray-600 dark:text-gray-300">Open Dashboard</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Esc</kbd>
-                  <span className="text-gray-600 dark:text-gray-300">Cancel</span>
+                  <span className="text-gray-600 dark:text-gray-300">Cancel/Close</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Ctrl+Enter</kbd>
-                  <span className="text-gray-600 dark:text-gray-300">Submit</span>
+                  <span className="text-gray-600 dark:text-gray-300">Submit Feedback</span>
                 </div>
               </div>
             </div>
@@ -193,8 +329,40 @@ function App() {
           </div>
         </main>
 
-        <FeedbackButton />
+        <FeedbackButton
+          onOpenDevDashboard={() => setShowDevDashboard(true)}
+          onOpenUserDashboard={() => setShowUserDashboard(true)}
+          onOpenNotifications={() => setShowNotifications(true)}
+        />
       </div>
+
+      {/* Developer Dashboard with Dummy Data */}
+      <FeedbackDashboard
+        isOpen={showDevDashboard}
+        onClose={() => setShowDevDashboard(false)}
+        data={feedbackData}
+        isDeveloper={true}
+        isUser={false}
+        onStatusChange={handleStatusChange}
+      />
+
+      {/* User Dashboard with Dummy Data */}
+      <FeedbackDashboard
+        isOpen={showUserDashboard}
+        onClose={() => setShowUserDashboard(false)}
+        data={feedbackData}
+        isDeveloper={false}
+        isUser={true}
+      />
+
+      {/* Update Notifications */}
+      <FeedbackUpdatesNotification
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        updates={updates}
+        onDismissUpdate={handleDismissUpdate}
+        onDismissAll={handleDismissAll}
+      />
     </FeedbackProvider>
   );
 }
