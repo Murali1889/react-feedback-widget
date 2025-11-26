@@ -344,3 +344,62 @@ export const dummyUpdatesData = [
     ]
   }
 ];
+
+// General updates data - features and fixes pushed by developers
+// These are shown to all users even if they didn't submit the feedback
+export const dummyGeneralUpdates = [
+  {
+    id: 'update-1',
+    type: 'feature',
+    title: 'New Export to PDF Feature',
+    description: 'You can now export your reports to PDF format with custom branding and formatting options.',
+    date: '2025-11-03T10:00:00Z',
+    version: '2.1.0',
+    icon: 'Package'
+  },
+  {
+    id: 'update-2',
+    type: 'bugfix',
+    title: 'Fixed Image Upload Performance',
+    description: 'Improved image upload speed by 3x with optimized compression and parallel processing.',
+    date: '2025-11-02T16:00:00Z',
+    version: '2.0.8',
+    icon: 'CheckCircle'
+  },
+  {
+    id: 'update-3',
+    type: 'feature',
+    title: 'Enhanced Search with Filters',
+    description: 'Search now supports advanced filters including date range, categories, and custom tags.',
+    date: '2025-11-01T14:00:00Z',
+    version: '2.0.7',
+    icon: 'Package'
+  },
+  {
+    id: 'update-4',
+    type: 'bugfix',
+    title: 'Fixed Notification Badge Counter',
+    description: 'Notification badges now correctly display the number of unread items.',
+    date: '2025-10-31T11:30:00Z',
+    version: '2.0.6',
+    icon: 'CheckCircle'
+  },
+  {
+    id: 'update-5',
+    type: 'feature',
+    title: 'Two-Factor Authentication',
+    description: 'Added optional 2FA for enhanced account security using authenticator apps.',
+    date: '2025-10-30T09:00:00Z',
+    version: '2.0.5',
+    icon: 'Package'
+  },
+  {
+    id: 'update-6',
+    type: 'bugfix',
+    title: 'Fixed Dashboard Loading Times',
+    description: 'Reduced dashboard load times by 60% through better caching and lazy loading.',
+    date: '2025-10-29T15:00:00Z',
+    version: '2.0.4',
+    icon: 'CheckCircle'
+  }
+];

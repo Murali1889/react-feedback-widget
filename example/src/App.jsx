@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { FeedbackProvider, useFeedback, FeedbackDashboard, FeedbackUpdatesNotification } from '../../dist/index.esm.js';
-import '../../dist/index.css';
-import { dummyFeedbackData, dummyUpdatesData } from './dummyData';
+import { FeedbackProvider, useFeedback, FeedbackDashboard, FeedbackTrigger } from '../../dist/index.esm.js';
+import { dummyFeedbackData } from './dummyData';
 
-function DarkModeToggle() {
-  const [darkMode, setDarkMode] = useState(false);
+// Import our new components
+import { Header } from './components/Header';
+import { Dashboard } from './components/Dashboard';
+import { Card, CardHeader, CardTitle, CardBody, CardFooter } from './components/Card';
+import { Button, IconButton } from './components/Button';
+import { Form, FormField, Input, TextArea, Select, Checkbox } from './components/Form';
 
+function DarkModeToggle({ darkMode, setDarkMode }) {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -15,125 +19,271 @@ function DarkModeToggle() {
   }, [darkMode]);
 
   return (
-    <button
+    <IconButton
+      icon={darkMode ? '☀️' : '🌙'}
+      variant="secondary"
       onClick={() => setDarkMode(!darkMode)}
-      className="fixed top-4 right-4 p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hover:scale-105 transition-transform z-[1000]"
-    >
-      {darkMode ? (
-        <svg className="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-        </svg>
-      ) : (
-        <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-        </svg>
-      )}
-    </button>
+      className="fixed top-24 right-4 z-[1000]"
+    />
   );
 }
 
-function DeveloperModeToggle({ isDeveloper, onToggle }) {
-  return (
-    <button
-      onClick={onToggle}
-      className="fixed top-4 right-20 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hover:scale-105 transition-transform z-[1000] text-sm font-semibold"
-    >
-      {isDeveloper ? '👨‍💻 Developer Mode' : '👤 User Mode'}
-    </button>
-  );
-}
+DarkModeToggle.displayName = 'DarkModeToggle';
 
-function FeedbackButton({ onOpenDevDashboard, onOpenUserDashboard, onOpenNotifications }) {
-  const { isActive, setIsActive, setIsDashboardOpen } = useFeedback();
+function FeedbackButtons({ onOpenDevDashboard, onOpenUserDashboard }) {
+  const { isActive, setIsActive, setIsDashboardOpen, startRecording } = useFeedback();
 
   return (
-    <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[1000]">
-      <button
-        onClick={onOpenNotifications}
-        className="px-6 py-4 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
-      >
-        🔔 Updates (5)
-      </button>
-      <button
-        onClick={onOpenDevDashboard}
-        className="px-6 py-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
-      >
-        👨‍💻 Dev Dashboard
-      </button>
-      <button
-        onClick={onOpenUserDashboard}
-        className="px-6 py-4 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
-      >
-        👤 User Dashboard
-      </button>
-      <button
-        onClick={() => setIsDashboardOpen(true)}
-        className="px-6 py-4 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1"
-      >
-        📊 Live Dashboard
-      </button>
-      <button
+    <div className="fixed bottom-6 left-6 flex flex-col gap-3 z-[1000]">
+      <Button variant="primary" icon="👨‍💻" onClick={onOpenDevDashboard}>
+        Dev Dashboard
+      </Button>
+      <Button variant="success" icon="👤" onClick={onOpenUserDashboard}>
+        User Dashboard
+      </Button>
+      <Button variant="secondary" icon="📊" onClick={() => setIsDashboardOpen(true)}>
+        Live Dashboard
+      </Button>
+      <Button variant="danger" icon="📹" onClick={startRecording}>
+        Record Video
+      </Button>
+      <Button
+        variant={isActive ? 'danger' : 'primary'}
+        icon={isActive ? '✕' : '💬'}
         onClick={() => setIsActive(!isActive)}
-        className={`px-6 py-4 rounded-lg font-bold shadow-2xl transition-all hover:-translate-y-1 ${
-          isActive
-            ? 'bg-red-500 hover:bg-red-600 text-white'
-            : 'bg-blue-500 hover:bg-blue-600 text-white'
-        }`}
       >
-        {isActive ? '✕ Cancel Feedback' : '💬 Report Issue'}
-      </button>
+        {isActive ? 'Cancel' : 'Report Issue'}
+      </Button>
     </div>
   );
 }
 
+FeedbackButtons.displayName = 'FeedbackButtons';
+
+function FeedbackTriggerWrapper({ darkMode, setFeedbackActive }) {
+  const { startRecording } = useFeedback();
+
+  return (
+    <FeedbackTrigger
+      mode={darkMode ? 'dark' : 'light'}
+      onFeedback={() => setFeedbackActive(true)}
+      onRecord={startRecording}
+      showRecordButton={true}
+    />
+  );
+}
+
+FeedbackTriggerWrapper.displayName = 'FeedbackTriggerWrapper';
+
+function ContactForm() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
+    priority: '',
+    subscribe: false,
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('Form submitted:', formData);
+  };
+
+  return (
+    <Card variant="elevated">
+      <CardHeader>
+        <CardTitle subtitle="We'd love to hear from you">Contact Us</CardTitle>
+      </CardHeader>
+      <CardBody>
+        <Form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Name" required>
+              <Input
+                placeholder="John Doe"
+                icon="👤"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Email" required>
+              <Input
+                type="email"
+                placeholder="john@example.com"
+                icon="✉️"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Subject">
+            <Select
+              placeholder="Select a subject"
+              value={formData.subject}
+              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+              options={[
+                { value: 'general', label: 'General Inquiry' },
+                { value: 'support', label: 'Technical Support' },
+                { value: 'feedback', label: 'Product Feedback' },
+                { value: 'partnership', label: 'Partnership' },
+              ]}
+            />
+          </FormField>
+
+          <FormField label="Priority">
+            <Select
+              placeholder="Select priority"
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+              options={[
+                { value: 'low', label: 'Low - No rush' },
+                { value: 'medium', label: 'Medium - Within a week' },
+                { value: 'high', label: 'High - Urgent' },
+              ]}
+            />
+          </FormField>
+
+          <FormField label="Message" required hint="Please be as detailed as possible">
+            <TextArea
+              placeholder="Tell us what's on your mind..."
+              rows={5}
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+            />
+          </FormField>
+
+          <Checkbox
+            label="Subscribe to our newsletter for updates"
+            checked={formData.subscribe}
+            onChange={(e) => setFormData({ ...formData, subscribe: e.target.checked })}
+          />
+
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" variant="primary" icon="📤">
+              Send Message
+            </Button>
+            <Button type="button" variant="ghost">
+              Cancel
+            </Button>
+          </div>
+        </Form>
+      </CardBody>
+    </Card>
+  );
+}
+
+ContactForm.displayName = 'ContactForm';
+
+function FeatureShowcase() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <FeatureCard
+        icon="📸"
+        title="Screenshot Capture"
+        description="Automatically capture screenshots of selected elements with one click"
+        color="from-blue-500 to-cyan-500"
+      />
+      <FeatureCard
+        icon="⚛️"
+        title="React Detection"
+        description="Identify React components directly from the DOM for precise debugging"
+        color="from-purple-500 to-pink-500"
+      />
+      <FeatureCard
+        icon="🎨"
+        title="Theming"
+        description="Full dark mode support with customizable themes"
+        color="from-amber-500 to-orange-500"
+      />
+    </div>
+  );
+}
+
+FeatureShowcase.displayName = 'FeatureShowcase';
+
+function FeatureCard({ icon, title, description, color }) {
+  return (
+    <Card variant="elevated" className="group hover:shadow-2xl">
+      <CardBody className="text-center py-8">
+        <FeatureIcon icon={icon} color={color} />
+        <FeatureTitle>{title}</FeatureTitle>
+        <FeatureDescription>{description}</FeatureDescription>
+      </CardBody>
+    </Card>
+  );
+}
+
+FeatureCard.displayName = 'FeatureCard';
+
+function FeatureIcon({ icon, color }) {
+  return (
+    <div className={`w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform shadow-xl`}>
+      {icon}
+    </div>
+  );
+}
+
+FeatureIcon.displayName = 'FeatureIcon';
+
+function FeatureTitle({ children }) {
+  return (
+    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{children}</h3>
+  );
+}
+
+FeatureTitle.displayName = 'FeatureTitle';
+
+function FeatureDescription({ children }) {
+  return (
+    <p className="text-gray-500 dark:text-gray-400 text-sm">{children}</p>
+  );
+}
+
+FeatureDescription.displayName = 'FeatureDescription';
+
 function App() {
-  const [isDeveloper, setIsDeveloper] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [feedbackActive, setFeedbackActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // State for custom dashboards with dummy data
   const [showDevDashboard, setShowDevDashboard] = useState(false);
   const [showUserDashboard, setShowUserDashboard] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [updates, setUpdates] = useState(dummyUpdatesData);
   const [feedbackData, setFeedbackData] = useState(dummyFeedbackData);
 
-  const handleFeedbackSubmit = async (feedbackData) => {
-    console.log('=== Feedback Submitted ===');
-    console.log('Feedback:', feedbackData.feedback);
-    console.log('Element Info:', feedbackData.elementInfo);
-    console.log('Screenshot:', feedbackData.screenshot ? 'Captured' : 'Not captured');
-    console.log('========================');
-    console.log(feedbackData)
+  const currentUser = {
+    name: 'Alice Johnson',
+    email: 'alice@example.com',
+    role: 'Developer'
+  };
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  const handleFeedbackSubmit = async (data) => {
+    console.log('=== Feedback Submitted ===');
+    console.log('Feedback:', data.feedback);
+    console.log('Element Info:', data.elementInfo);
+    console.log('React Component:', data.elementInfo?.reactComponent);
+    console.log('Component Stack:', data.elementInfo?.reactComponentStack);
+    console.log('Source File:', data.elementInfo?.sourceFile);
+    console.log('Screenshot:', data.screenshot ? `Captured (${data.screenshot.length} bytes)` : 'Not captured');
+    console.log('========================');
+    await new Promise(resolve => setTimeout(resolve, 500));
   };
 
   const handleStatusChange = ({ id, status, comment }) => {
-    console.log('=== Status Changed ===');
-    console.log('Feedback ID:', id);
-    console.log('New Status:', status);
-    console.log('Developer Comment:', comment || '(no comment)');
-    console.log('=====================');
-
-    // Update the dummy data
+    console.log('Status Changed:', { id, status, comment });
     setFeedbackData(prev => prev.map(item =>
-      item.id === id ? {
-        ...item,
-        status,
-        // If there's a comment, update the responseMessage
-        ...(comment && { responseMessage: comment })
-      } : item
+      item.id === id ? { ...item, status, ...(comment && { responseMessage: comment }) } : item
     ));
   };
 
-  const handleDismissUpdate = (updateId) => {
-    console.log('Dismissed update:', updateId);
-    setUpdates(prev => prev.filter(u => u.id !== updateId));
+  const handleRefresh = () => {
+    setIsLoading(true);
+    setTimeout(() => setIsLoading(false), 1500);
   };
 
-  const handleDismissAll = () => {
-    console.log('Dismissed all updates');
-    setUpdates([]);
-    setShowNotifications(false);
+  const handleLogout = () => {
+    console.log('Logout clicked');
   };
 
   return (
@@ -141,230 +291,308 @@ function App() {
       onSubmit={handleFeedbackSubmit}
       onStatusChange={handleStatusChange}
       dashboard={true}
-      isDeveloper={isDeveloper}
-      isUser={!isDeveloper}
-      userName="Test User"
-      userEmail="test@example.com"
+      isDeveloper={true}
+      isUser={true}
+      userName={currentUser.name}
+      userEmail={currentUser.email}
+      mode={darkMode ? 'dark' : 'light'}
+      isActive={feedbackActive}
+      onActiveChange={setFeedbackActive}
     >
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <DarkModeToggle />
-        <DeveloperModeToggle isDeveloper={isDeveloper} onToggle={() => setIsDeveloper(!isDeveloper)} />
+        {/* Header */}
+        <Header
+          title="FeedbackHub"
+          user={currentUser}
+          onLogout={handleLogout}
+        />
 
-        <header className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-16 text-center">
-          <div className="max-w-6xl mx-auto px-6">
-            <h1 className="text-5xl font-bold mb-4">🎯 React Visual Feedback</h1>
-            <p className="text-xl opacity-90">Test the feedback widget - Click elements to capture feedback</p>
-          </div>
-        </header>
+        <DarkModeToggle darkMode={darkMode} setDarkMode={setDarkMode} />
 
-        <main className="py-12">
-          <div className="max-w-6xl mx-auto px-6 space-y-8">
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
 
-            {/* Demo Dashboards */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 shadow-xl text-white">
-              <h2 className="text-3xl font-bold mb-6">🎮 Demo Dashboards</h2>
-              <p className="text-lg opacity-90 mb-6">
-                Click the buttons on the right to test different views with pre-loaded dummy data:
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-4xl mb-3">👨‍💻</div>
-                  <h3 className="text-xl font-bold mb-2">Developer Dashboard</h3>
-                  <p className="text-sm opacity-90 mb-4">Full control with status management, delete options, and technical details. Contains 7 feedback items.</p>
-                  <button
-                    onClick={() => setShowDevDashboard(true)}
-                    className="w-full px-4 py-2 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-                  >
-                    Open Dev Dashboard
-                  </button>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-4xl mb-3">👤</div>
-                  <h3 className="text-xl font-bold mb-2">User Dashboard</h3>
-                  <p className="text-sm opacity-90 mb-4">Simplified view for regular users. Shows status and developer responses. Filter by status.</p>
-                  <button
-                    onClick={() => setShowUserDashboard(true)}
-                    className="w-full px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-                  >
-                    Open User Dashboard
-                  </button>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-4xl mb-3">🔔</div>
-                  <h3 className="text-xl font-bold mb-2">Update Notifications</h3>
-                  <p className="text-sm opacity-90 mb-4">Shows users updates on their feedback. Contains 5 updates grouped by status.</p>
-                  <button
-                    onClick={() => setShowNotifications(true)}
-                    className="w-full px-4 py-2 bg-white text-yellow-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-                  >
-                    Open Notifications
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Dashboard Section */}
+          <section>
+            <Dashboard />
+          </section>
 
-            {/* How to Test */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">How to Test Live Feedback</h2>
-              <ol className="space-y-4">
-                <li className="flex items-start text-gray-600 dark:text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">1</span>
-                  <span>Click "Report Issue" or press <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">Ctrl+Q</kbd></span>
-                </li>
-                <li className="flex items-start text-gray-600 dark:text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">2</span>
-                  <span>Hover over any element to highlight it</span>
-                </li>
-                <li className="flex items-start text-gray-600 dark:text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">3</span>
-                  <span>Click the element to capture screenshot</span>
-                </li>
-                <li className="flex items-start text-gray-600 dark:text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">4</span>
-                  <span>Fill the feedback form and submit</span>
-                </li>
-                <li className="flex items-start text-gray-600 dark:text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">5</span>
-                  <span>Click "Live Dashboard" or press <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">Ctrl+Shift+Q</kbd> to view all feedback</span>
-                </li>
-                <li className="flex items-start text-gray-600 dark:text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold mr-4">6</span>
-                  <span>Toggle between Developer and User mode (top right) to see different dashboard views</span>
-                </li>
-              </ol>
-            </div>
+          {/* Feature Showcase */}
+          <section>
+            <SectionHeader
+              title="Key Features"
+              subtitle="Everything you need for effective visual feedback"
+            />
+            <FeatureShowcase />
+          </section>
 
-            {/* Keyboard Shortcuts */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">⌨️ Keyboard Shortcuts</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Ctrl+Q</kbd>
-                  <span className="text-gray-600 dark:text-gray-300">Activate Feedback</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Ctrl+Shift+Q</kbd>
-                  <span className="text-gray-600 dark:text-gray-300">Open Dashboard</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Esc</kbd>
-                  <span className="text-gray-600 dark:text-gray-300">Cancel/Close</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <kbd className="px-3 py-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded font-mono text-sm">Ctrl+Enter</kbd>
-                  <span className="text-gray-600 dark:text-gray-300">Submit Feedback</span>
-                </div>
-              </div>
-            </div>
+          {/* Button Showcase */}
+          <section>
+            <SectionHeader
+              title="Button Components"
+              subtitle="Click any button to test component detection"
+            />
+            <ButtonShowcase />
+          </section>
 
-            {/* Sample Content */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Sample Content</h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">This is a paragraph. Try clicking on it!</p>
-              <button className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors">
-                Sample Button
-              </button>
-              <div className="mt-6 p-6 bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 rounded-lg">
-                <h3 className="text-xl font-semibold text-yellow-900 dark:text-yellow-100 mb-2">Sample Box</h3>
-                <p className="text-yellow-800 dark:text-yellow-200">Click on this box or any element inside</p>
-              </div>
-            </div>
+          {/* Contact Form */}
+          <section>
+            <SectionHeader
+              title="Contact Form"
+              subtitle="Test form component detection"
+            />
+            <ContactForm />
+          </section>
 
-            {/* Interactive Buttons */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Interactive Elements</h2>
-              <div className="flex flex-wrap gap-4">
-                <button className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all hover:-translate-y-0.5">
-                  Primary
-                </button>
-                <button className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all hover:-translate-y-0.5">
-                  Secondary
-                </button>
-                <button className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-all hover:-translate-y-0.5">
-                  Success
-                </button>
-                <button className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all hover:-translate-y-0.5">
-                  Danger
-                </button>
-              </div>
-            </div>
-
-            {/* Form */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Form Example</h2>
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                <div>
-                  <label className="block text-gray-900 dark:text-white font-semibold mb-2">Name</label>
-                  <input
-                    type="text"
-                    placeholder="Enter your name"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-900 dark:text-white font-semibold mb-2">Email</label>
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
-                >
-                  Submit Form
-                </button>
-              </form>
-            </div>
-
-            {/* Visual Example */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Visual Example</h2>
-              <div className="w-64 h-64 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl">
-                Gradient Box
-              </div>
-            </div>
-
-          </div>
+          {/* Instructions */}
+          <section>
+            <InstructionsCard />
+          </section>
         </main>
 
-        <FeedbackButton
+        {/* Floating Feedback Button */}
+        <FeedbackTriggerWrapper
+          darkMode={darkMode}
+          setFeedbackActive={setFeedbackActive}
+        />
+
+        {/* Dashboard Buttons */}
+        <FeedbackButtons
           onOpenDevDashboard={() => setShowDevDashboard(true)}
           onOpenUserDashboard={() => setShowUserDashboard(true)}
-          onOpenNotifications={() => setShowNotifications(true)}
         />
       </div>
 
-      {/* Developer Dashboard with Dummy Data */}
+      {/* Developer Dashboard */}
       <FeedbackDashboard
         isOpen={showDevDashboard}
         onClose={() => setShowDevDashboard(false)}
         data={feedbackData}
         isDeveloper={true}
-        isUser={false}
         onStatusChange={handleStatusChange}
+        mode={darkMode ? 'dark' : 'light'}
+        title="Bug Reports"
+        showAllStatuses={true}
+        isLoading={isLoading}
+        onRefresh={handleRefresh}
       />
 
-      {/* User Dashboard with Dummy Data */}
+      {/* User Dashboard */}
       <FeedbackDashboard
         isOpen={showUserDashboard}
         onClose={() => setShowUserDashboard(false)}
         data={feedbackData}
         isDeveloper={false}
         isUser={true}
-      />
-
-      {/* Update Notifications */}
-      <FeedbackUpdatesNotification
-        isOpen={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        updates={updates}
-        onDismissUpdate={handleDismissUpdate}
-        onDismissAll={handleDismissAll}
+        userEmail={currentUser.email}
+        mode={darkMode ? 'dark' : 'light'}
+        title="My Feedback"
+        showAllStatuses={false}
+        onRefresh={handleRefresh}
+        isLoading={isLoading}
       />
     </FeedbackProvider>
   );
 }
+
+App.displayName = 'App';
+
+function SectionHeader({ title, subtitle }) {
+  return (
+    <div className="mb-8">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h2>
+      {subtitle && <p className="text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
+    </div>
+  );
+}
+
+SectionHeader.displayName = 'SectionHeader';
+
+function ButtonShowcase() {
+  return (
+    <Card variant="elevated">
+      <CardBody>
+        <div className="space-y-6">
+          <ButtonRow label="Variants">
+            <Button variant="primary">Primary</Button>
+            <Button variant="secondary">Secondary</Button>
+            <Button variant="success">Success</Button>
+            <Button variant="danger">Danger</Button>
+            <Button variant="warning">Warning</Button>
+            <Button variant="ghost">Ghost</Button>
+            <Button variant="outline">Outline</Button>
+          </ButtonRow>
+
+          <ButtonRow label="Sizes">
+            <Button size="sm">Small</Button>
+            <Button size="md">Medium</Button>
+            <Button size="lg">Large</Button>
+            <Button size="xl">Extra Large</Button>
+          </ButtonRow>
+
+          <ButtonRow label="With Icons">
+            <Button icon="🚀">Launch</Button>
+            <Button icon="💾" iconPosition="right">Save</Button>
+            <Button variant="success" icon="✓">Confirm</Button>
+            <Button variant="danger" icon="🗑️">Delete</Button>
+          </ButtonRow>
+
+          <ButtonRow label="States">
+            <Button loading>Loading</Button>
+            <Button disabled>Disabled</Button>
+          </ButtonRow>
+
+          <ButtonRow label="Test API Calls (for recording)">
+            <Button
+              variant="primary"
+              icon="🌐"
+              onClick={async () => {
+                console.log('Making API call...');
+                try {
+                  const res = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+                  const data = await res.json();
+                  console.log('API Response:', data.title);
+                } catch (err) {
+                  console.error('API Error:', err);
+                }
+              }}
+            >
+              Fetch Post
+            </Button>
+            <Button
+              variant="secondary"
+              icon="👥"
+              onClick={async () => {
+                console.log('Fetching users...');
+                try {
+                  const res = await fetch('https://jsonplaceholder.typicode.com/users');
+                  const data = await res.json();
+                  console.log('Got', data.length, 'users');
+                } catch (err) {
+                  console.error('API Error:', err);
+                }
+              }}
+            >
+              Fetch Users
+            </Button>
+            <Button
+              variant="success"
+              icon="💾"
+              onClick={() => {
+                console.log('Saving to localStorage...');
+                localStorage.setItem('test-key', JSON.stringify({ time: Date.now(), value: 'test' }));
+                console.log('Saved!');
+              }}
+            >
+              Save to Storage
+            </Button>
+            <Button
+              variant="warning"
+              icon="⚠️"
+              onClick={() => {
+                console.log('This is a log');
+                console.warn('This is a warning');
+                console.error('This is an error');
+              }}
+            >
+              Test Console
+            </Button>
+          </ButtonRow>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+ButtonShowcase.displayName = 'ButtonShowcase';
+
+function ButtonRow({ label, children }) {
+  return (
+    <div>
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">{label}</p>
+      <div className="flex flex-wrap gap-3">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+ButtonRow.displayName = 'ButtonRow';
+
+function InstructionsCard() {
+  return (
+    <Card variant="gradient">
+      <CardBody className="py-8">
+        <h3 className="text-2xl font-bold mb-4">How to Test</h3>
+        <InstructionsList />
+        <KeyboardShortcuts />
+      </CardBody>
+    </Card>
+  );
+}
+
+InstructionsCard.displayName = 'InstructionsCard';
+
+function InstructionsList() {
+  const steps = [
+    'Press Alt+Q or click the floating button to activate feedback mode',
+    'Hover over elements - you\'ll see the React component name in the tooltip',
+    'Click to capture a screenshot of the element',
+    'The modal shows: Screenshot, Component name, Element details',
+    'Fill in feedback and submit',
+  ];
+
+  return (
+    <ol className="space-y-2 mb-6">
+      {steps.map((step, i) => (
+        <InstructionStep key={i} number={i + 1} text={step} />
+      ))}
+    </ol>
+  );
+}
+
+InstructionsList.displayName = 'InstructionsList';
+
+function InstructionStep({ number, text }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
+        {number}
+      </span>
+      <span className="opacity-90">{text}</span>
+    </li>
+  );
+}
+
+InstructionStep.displayName = 'InstructionStep';
+
+function KeyboardShortcuts() {
+  const shortcuts = [
+    { keys: 'Alt + Q', action: 'Activate Feedback' },
+    { keys: 'Alt + Shift + Q', action: 'Open Dashboard' },
+    { keys: 'Esc', action: 'Cancel/Close' },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-4">
+      {shortcuts.map((shortcut, i) => (
+        <ShortcutBadge key={i} {...shortcut} />
+      ))}
+    </div>
+  );
+}
+
+KeyboardShortcuts.displayName = 'KeyboardShortcuts';
+
+function ShortcutBadge({ keys, action }) {
+  return (
+    <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+      <kbd className="px-2 py-1 bg-white/20 rounded text-sm font-mono">{keys}</kbd>
+      <span className="text-sm opacity-80">{action}</span>
+    </div>
+  );
+}
+
+ShortcutBadge.displayName = 'ShortcutBadge';
 
 export default App;
