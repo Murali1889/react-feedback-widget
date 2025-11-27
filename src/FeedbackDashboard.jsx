@@ -5,12 +5,12 @@ import {
   X, Trash2, CheckCircle, AlertCircle, Play, Ban, ChevronDown,
   Filter, RefreshCw, Loader2, MessageSquare, Inbox, Eye, Archive, Download,
   PauseCircle, XCircle, HelpCircle, Lightbulb, Bug, Zap, Image, Layers, FileCode, Video,
-  User, Mail, Globe, Monitor, Code, Copy, Check, ChevronRight
+  User, Mail, Globe, Monitor, Code, Copy, Check, ChevronRight, ZoomIn
 } from 'lucide-react';
 import { getTheme, fadeIn, slideInRight, scaleIn, dropdownSlideIn, pulse, spin, slideDown } from './theme.js';
 import { formatPath } from './utils.js';
 import { SessionReplay } from './SessionReplay.jsx';
-import { StatusBadge, StatusBadgeStyled, getIconComponent, normalizeStatusKey } from './components/StatusBadge.jsx';
+import { StatusBadge, StatusBadgeStyled, getIconComponent, normalizeStatusKey, getStatusData } from './components/StatusBadge.jsx';
 
 
 const FEEDBACK_STORAGE_KEY = 'react-feedback-data';
@@ -101,7 +101,7 @@ const DashboardPanel = styled.div`
   right: 0;
   bottom: 0;
   width: 100%;
-  max-width: 700px;
+  max-width: 800px;
   background-color: ${props => props.theme.colors.modalBg};
   z-index: 9999;
   box-shadow: ${props => props.theme.mode === 'dark'
@@ -734,21 +734,46 @@ const FullFeedbackText = styled.p`
   line-height: 1.7;
 `;
 
-const ScreenshotPreview = styled.img`
-  width: 100px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid ${props => props.theme.colors.border};
+const ScreenshotWrapper = styled.div`
+  position: relative;
+  width: 160px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
   cursor: zoom-in;
-  background-color: ${props => props.theme.mode === 'dark' ? '#0f172a' : '#f8fafc'};
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid ${props => props.theme.colors.border};
+  background-color: ${props => props.theme.colors.cardBg};
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
 
   &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-color: ${props => props.theme.colors.borderFocus};
   }
+
+  &:hover .zoom-overlay {
+    opacity: 1;
+  }
+`;
+
+const ZoomOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: white;
+`;
+
+const ScreenshotPreview = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 `;
 
 const TechnicalGrid = styled.div`
@@ -990,7 +1015,8 @@ export const FeedbackDashboard = ({
   isLoading = false,
   onRefresh,
   title = 'Feedback',
-  statuses = DEFAULT_STATUSES,
+  statuses,
+  acceptableStatuses,
   showAllStatuses = true,
   error = null,
   userName,
@@ -1012,10 +1038,40 @@ export const FeedbackDashboard = ({
   const useLocalStorage = data === undefined;
   const theme = getTheme(mode);
 
-  // Merge custom statuses with defaults
+  // Build statuses: acceptableStatuses controls what's shown, statuses provides config
   const mergedStatuses = useMemo(() => {
-    return { ...DEFAULT_STATUSES, ...statuses };
-  }, [statuses]);
+    // If acceptableStatuses is provided, ONLY show those statuses
+    if (acceptableStatuses && Array.isArray(acceptableStatuses) && acceptableStatuses.length > 0) {
+      const result = {};
+      acceptableStatuses.forEach(key => {
+        // Use config from statuses prop if provided, otherwise create a basic config
+        if (statuses && statuses[key]) {
+          result[key] = statuses[key];
+        } else if (DEFAULT_STATUSES[key]) {
+          result[key] = DEFAULT_STATUSES[key];
+        } else {
+          // Create a fallback config for unknown status keys
+          result[key] = {
+            key: key,
+            label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+            color: '#6b7280',
+            bgColor: '#f3f4f6',
+            textColor: '#374151',
+            icon: 'AlertCircle'
+          };
+        }
+      });
+      return result;
+    }
+
+    // If only statuses is provided (no acceptableStatuses), use those
+    if (statuses && Object.keys(statuses).length > 0) {
+      return statuses;
+    }
+
+    // Fallback to defaults
+    return DEFAULT_STATUSES;
+  }, [statuses, acceptableStatuses]);
 
   // Load feedback
   useEffect(() => {
@@ -1285,8 +1341,11 @@ export const FeedbackDashboard = ({
                 {feedbackList.length}
               </FilterCount>
             </FilterTab>
-            {Object.entries(visibleStatuses).map(([key, statusData]) => {
+            {Object.entries(visibleStatuses).map(([key, rawStatusData]) => {
+              // Skip invalid/undefined status entries
+              if (!rawStatusData || typeof rawStatusData !== 'object') return null;
               const count = statusCounts[key] || 0;
+              const statusData = getStatusData(key, visibleStatuses);
               const IconComponent = getIconComponent(statusData.icon);
               return (
                 <FilterTab
@@ -1368,9 +1427,9 @@ export const FeedbackDashboard = ({
 
               {filteredFeedback.map((item) => {
                 const statusKey = normalizeStatusKey(item.status || 'new', mergedStatuses);
-                const statusData = mergedStatuses[statusKey];
+                const statusData = getStatusData(statusKey, mergedStatuses);
                 const isExpanded = expandedRow?.id === item.id;
-                const IconComponent = getIconComponent(statusData?.icon);
+                const IconComponent = getIconComponent(statusData.icon);
 
                 return (
                   <div key={item.id}>
@@ -1412,15 +1471,17 @@ export const FeedbackDashboard = ({
                             }
                             itemId={item.id}
                             statuses={mergedStatuses}
+                            acceptableStatuses={acceptableStatuses}
                             theme={theme}
                           />
                         ) : (
                           <StatusBadgeStyled
-                            $statusColor={statusData?.color}
-                            $textColor={statusData?.textColor}
+                            $statusColor={statusData.color}
+                            $textColor={statusData.textColor}
+                            $statusBg={statusData.bgColor}
                           >
-                            {IconComponent && <IconComponent size={16} />}
-                            <span>{statusData?.label || 'Unknown'}</span>
+                            <IconComponent size={16} />
+                            <span>{statusData.label}</span>
                           </StatusBadgeStyled>
                         )}
                       </StatusCell>
@@ -1451,11 +1512,15 @@ export const FeedbackDashboard = ({
                             <ExpandedLayout>
                               {item.screenshot && (
                                 <ExpandedMedia>
-                                  <ScreenshotPreview
-                                    src={item.screenshot}
-                                    alt="Feedback screenshot"
-                                    onClick={() => setScreenshotModal({ isOpen: true, image: item.screenshot })}
-                                  />
+                                  <ScreenshotWrapper onClick={() => setScreenshotModal({ isOpen: true, image: item.screenshot })}>
+                                    <ScreenshotPreview
+                                      src={item.screenshot}
+                                      alt="Feedback screenshot"
+                                    />
+                                    <ZoomOverlay className="zoom-overlay">
+                                      <ZoomIn size={24} />
+                                    </ZoomOverlay>
+                                  </ScreenshotWrapper>
                                 </ExpandedMedia>
                               )}
                               <ExpandedDetails>

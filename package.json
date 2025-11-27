@@ -1,6 +1,6 @@
 {
   "name": "react-visual-feedback",
-  "version": "1.4.0",
+  "version": "1.4.8",
   "description": "A visual feedback widget for React applications with element selection, screenshot capture, and professional dashboard",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",

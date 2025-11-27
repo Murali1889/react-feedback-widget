@@ -8,9 +8,11 @@ A powerful, visual feedback collection tool for React applications with screen r
 - **Visual Element Selection** - Click any element with hover highlighting
 - **Screenshot Capture** - Automatic pixel-perfect screenshot with CSS rendering
 - **Screen Recording** - Record screen with audio and capture console/network logs
+- **Manual Feedback** - `Alt+A` to open form directly without selection
+- **File Attachments** - Drag & drop support for Images, Videos, PDFs, and other files
 - **Canvas Drawing** - Annotate screenshots with drawings and highlights
 - **React Component Detection** - Automatically detects React component names and source files
-- **Keyboard Shortcuts** - `Alt+Q` to activate, `Esc` to cancel
+- **Keyboard Shortcuts** - `Alt+Q` (Selection), `Alt+A` (Manual), `Alt+W` (Record), `Esc` (Cancel)
 
 ### Session Replay
 - **Video Playback** - Watch recorded user sessions
@@ -51,6 +53,7 @@ import { FeedbackProvider } from 'react-visual-feedback';
 function App() {
   const handleFeedbackSubmit = async (feedbackData) => {
     console.log('Feedback received:', feedbackData);
+    // feedbackData.attachment contains any manually uploaded file
     await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -88,7 +91,7 @@ function FeedbackButtons() {
 
 function App() {
   const handleFeedbackSubmit = async (feedbackData) => {
-    // feedbackData contains: feedback, screenshot, video, eventLogs, elementInfo, etc.
+    // feedbackData contains: feedback, screenshot, video, attachment, eventLogs, elementInfo, etc.
     await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -113,6 +116,7 @@ function App() {
       userName="John Doe"
       userEmail="john@example.com"
       mode="light"
+      defaultOpen={false} // Set to true to open feedback form on mount
     >
       <YourApp />
       <FeedbackButtons />
@@ -138,6 +142,26 @@ function App() {
 | `mode` | `'light' \| 'dark'` | `'light'` | Theme mode |
 | `isActive` | `boolean` | - | Controlled active state |
 | `onActiveChange` | `(active) => void` | - | Callback for controlled mode |
+| `defaultOpen` | `boolean` | `false` | Open manual feedback form immediately on mount |
+
+### FeedbackDashboard Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `isOpen` | `boolean` | required | Control dashboard visibility |
+| `onClose` | `() => void` | required | Callback when dashboard closes |
+| `data` | `Array` | - | Feedback data (uses localStorage if undefined) |
+| `isDeveloper` | `boolean` | `false` | Enable developer mode with delete |
+| `isUser` | `boolean` | `true` | Enable user mode |
+| `onStatusChange` | `({id, status, comment}) => void` | - | Callback when status changes |
+| `mode` | `'light' \| 'dark'` | `'light'` | Theme mode |
+| `isLoading` | `boolean` | `false` | Show loading state |
+| `onRefresh` | `() => void` | - | Callback for refresh button |
+| `title` | `string` | `'Feedback'` | Dashboard title |
+| `statuses` | `object` | `DEFAULT_STATUSES` | Status configurations (label, color, icon) |
+| `acceptableStatuses` | `string[]` | - | Array of status keys to show (e.g., `['open', 'resolved']`) |
+| `showAllStatuses` | `boolean` | `true` | Show all statuses in filter |
+| `error` | `string` | `null` | Error message to display |
 
 ### useFeedback Hook
 
@@ -185,11 +209,11 @@ interface FeedbackData {
     height: number;
   };
 
-  // Screenshot (for element selection)
-  screenshot?: string;           // Base64 PNG data URL
+  // Attachments
+  screenshot?: string;           // Base64 PNG data URL (Automatic)
+  video?: string;                // Base64 webm data URL (Recording)
+  attachment?: File;             // Generic file (Manual Upload)
 
-  // Video (for screen recording)
-  video?: string;                // Base64 webm data URL
   eventLogs?: EventLog[];        // Console/network logs
 
   // Element info (for element selection)
@@ -262,6 +286,17 @@ CREATE TABLE feedback_videos (
     video_url TEXT,            -- URL to cloud storage (for large videos)
     duration_ms INTEGER,
     file_size_bytes BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Generic attachments table
+CREATE TABLE feedback_attachments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    feedback_id UUID NOT NULL REFERENCES feedback(id) ON DELETE CASCADE,
+    file_name VARCHAR(255),
+    file_type VARCHAR(100),
+    file_size_bytes BIGINT,
+    file_data TEXT,            -- Base64 or URL
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -390,6 +425,19 @@ CREATE TABLE feedback_videos (
     FOREIGN KEY (feedback_id) REFERENCES feedback(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Attachments table
+CREATE TABLE feedback_attachments (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    feedback_id CHAR(36) NOT NULL,
+    file_name VARCHAR(255),
+    file_type VARCHAR(100),
+    file_size_bytes BIGINT,
+    file_data LONGTEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (feedback_id) REFERENCES feedback(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Event logs table
 CREATE TABLE feedback_event_logs (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -451,7 +499,7 @@ CREATE TABLE feedback_status_history (
 // POST /api/feedback - Submit new feedback
 app.post('/api/feedback', async (req, res) => {
   const { feedback, type, userName, userEmail, url, userAgent,
-          viewport, screenshot, video, eventLogs, elementInfo } = req.body;
+          viewport, screenshot, video, attachment, eventLogs, elementInfo } = req.body;
 
   // Start transaction
   const client = await pool.connect();
@@ -481,6 +529,16 @@ app.post('/api/feedback', async (req, res) => {
         INSERT INTO feedback_videos (feedback_id, video_data)
         VALUES ($1, $2)
       `, [feedbackId, video]);
+    }
+    
+    // Insert manual attachment (generic file)
+    if (attachment) {
+       // Note: 'attachment' here is assumed to be pre-processed/uploaded file metadata + content
+       // In a real app, you might handle file upload separately (multipart/form-data)
+       await client.query(`
+        INSERT INTO feedback_attachments (feedback_id, file_name, file_data)
+        VALUES ($1, $2, $3)
+      `, [feedbackId, attachment.name, attachment.data]);
     }
 
     // Insert event logs if exist
@@ -553,22 +611,230 @@ app.patch('/api/feedback/:id/status', async (req, res) => {
 
 | Shortcut | Action |
 |----------|--------|
-| `Alt+Q` | Activate feedback mode |
+| `Alt+Q` | Activate feedback mode (element selection) |
+| `Alt+A` | Open Manual Feedback form |
+| `Alt+W` | Start screen recording |
 | `Alt+Shift+Q` | Open dashboard |
 | `Esc` | Cancel/close |
 
-## Status Options
+## Status System
 
-| Status | Description |
-|--------|-------------|
-| **New** | Initial submission |
-| **Open** | Acknowledged |
-| **In Progress** | Being worked on |
-| **Under Review** | Code review |
-| **On Hold** | Paused |
-| **Resolved** | Fixed |
-| **Closed** | Completed |
-| **Won't Fix** | Not planned |
+### Default Statuses
+
+| Key | Label | Color | Icon |
+|-----|-------|-------|------|
+| `new` | New | Purple (#8b5cf6) | Inbox |
+| `open` | Open | Amber (#f59e0b) | AlertCircle |
+| `inProgress` | In Progress | Blue (#3b82f6) | Play |
+| `underReview` | Under Review | Cyan (#06b6d4) | Eye |
+| `onHold` | On Hold | Gray (#6b7280) | PauseCircle |
+| `resolved` | Resolved | Green (#10b981) | CheckCircle |
+| `closed` | Closed | Slate (#64748b) | Archive |
+| `wontFix` | Won't Fix | Red (#ef4444) | Ban |
+
+### Custom Statuses
+
+You control which statuses are available. Pass your own `statuses` object and optionally `acceptableStatuses` array to control what's shown:
+
+```jsx
+import { FeedbackDashboard } from 'react-visual-feedback';
+
+// Define your status configurations
+const myStatuses = {
+  open: {
+    label: 'Open',
+    color: '#f59e0b',
+    bgColor: '#fef3c7',
+    textColor: '#92400e',
+    icon: 'AlertCircle'  // Optional - defaults to AlertCircle if not provided
+  },
+  in_progress: {
+    label: 'In Progress',
+    color: '#3b82f6',
+    bgColor: '#dbeafe',
+    textColor: '#1e40af',
+    icon: 'Play'
+  },
+  resolved: {
+    label: 'Resolved',
+    color: '#10b981',
+    bgColor: '#d1fae5',
+    textColor: '#065f46',
+    icon: 'CheckCircle'
+  }
+};
+
+// Option 1: Show all statuses defined in myStatuses
+<FeedbackDashboard
+  isOpen={true}
+  statuses={myStatuses}
+  // ... other props
+/>
+
+// Option 2: Use acceptableStatuses to show only specific statuses
+<FeedbackDashboard
+  isOpen={true}
+  statuses={myStatuses}
+  acceptableStatuses={['open', 'resolved']}  // Only show these 2
+  // ... other props
+/>
+```
+
+#### Extending Default Statuses
+
+If you want to keep the defaults and add more:
+
+```jsx
+import { DEFAULT_STATUSES } from 'react-visual-feedback';
+
+const extendedStatuses = {
+  ...DEFAULT_STATUSES,
+  // Add new status
+  testing: {
+    key: 'testing',
+    label: 'In Testing',
+    color: '#8b5cf6',
+    bgColor: '#ede9fe',
+    textColor: '#6d28d9',
+    icon: 'Bug'
+  },
+  // Override existing
+  resolved: {
+    ...DEFAULT_STATUSES.resolved,
+    label: 'Fixed & Deployed'
+  }
+};
+```
+
+### Status Object Structure
+
+```typescript
+interface StatusConfig {
+  key: string;        // Unique identifier
+  label: string;      // Display name in UI
+  color: string;      // Border and icon color (hex)
+  bgColor: string;    // Background color (hex)
+  textColor: string;  // Text color (hex)
+  icon: string;       // Icon name from available icons
+}
+```
+
+### Available Icons
+
+The following icons from Lucide React are available for custom statuses:
+
+| Icon Name | Description |
+|-----------|-------------|
+| `Inbox` | New items |
+| `AlertCircle` | Warnings/alerts |
+| `Play` | In progress |
+| `Eye` | Under review |
+| `PauseCircle` | Paused/on hold |
+| `CheckCircle` | Completed/resolved |
+| `Archive` | Archived/closed |
+| `Ban` | Rejected/won't fix |
+| `XCircle` | Cancelled |
+| `HelpCircle` | Questions |
+| `Lightbulb` | Ideas/features |
+| `Bug` | Bug reports |
+| `Zap` | Quick actions |
+| `MessageSquare` | Comments |
+
+### Status Utility Functions
+
+```jsx
+import {
+  getStatusData,       // Get status config with safe defaults
+  getIconComponent,    // Get icon component from name
+  normalizeStatusKey,  // Normalize status key to available options
+  StatusBadge,         // Status badge component
+  StatusDropdown       // Status dropdown component
+} from 'react-visual-feedback';
+
+// Get status data with fallbacks for missing properties
+const statusData = getStatusData('inProgress', customStatuses);
+// Returns: { key, label, color, bgColor, textColor, icon }
+
+// Get icon component from string name
+const Icon = getIconComponent('CheckCircle');
+// Returns: Lucide React component
+
+// Normalize various status formats to valid keys
+const key = normalizeStatusKey('in_progress', customStatuses);
+// Returns: 'inProgress'
+```
+
+### Status Key Normalization
+
+The widget automatically normalizes various status key formats:
+
+| Input | Normalized To |
+|-------|---------------|
+| `reported`, `submitted`, `pending` | `new` |
+| `doing`, `in_progress` | `inProgress` |
+| `review`, `under_review` | `underReview` |
+| `hold`, `on_hold`, `paused` | `onHold` |
+| `done`, `fixed`, `completed` | `resolved` |
+| `archived` | `closed` |
+| `rejected`, `wont_fix`, `cancelled` | `wontFix` |
+
+## Next.js Usage
+
+This package uses browser-only APIs and requires client-side rendering. Use dynamic import with `ssr: false`:
+
+```tsx
+// providers/FeedbackProviderClient.tsx
+'use client';
+
+import dynamic from 'next/dynamic';
+
+const FeedbackProvider = dynamic(
+  () => import('react-visual-feedback').then((mod) => mod.FeedbackProvider),
+  { ssr: false }
+);
+
+export default function FeedbackProviderClient({
+  children,
+  ...props
+}: {
+  children: React.ReactNode;
+  [key: string]: any;
+}) {
+  return (
+    <FeedbackProvider {...props}>
+      {children}
+    </FeedbackProvider>
+  );
+}
+```
+
+Then use in your layout:
+
+```tsx
+// app/layout.tsx
+import FeedbackProviderClient from './providers/FeedbackProviderClient';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <FeedbackProviderClient
+          onSubmit={async (data) => {
+            await fetch('/api/feedback', {
+              method: 'POST',
+              body: JSON.stringify(data)
+            });
+          }}
+          dashboard={true}
+          mode="light"
+        >
+          {children}
+        </FeedbackProviderClient>
+      </body>
+    </html>
+  );
+}
+```
 
 ## Browser Support
 
@@ -576,6 +842,90 @@ app.patch('/api/feedback/:id/status', async (req, res) => {
 - Firefox
 - Safari
 - Opera
+
+## All Exports
+
+```jsx
+import {
+  // Core components
+  FeedbackProvider,
+  FeedbackModal,
+  FeedbackDashboard,
+  FeedbackTrigger,
+  CanvasOverlay,
+
+  // Hooks
+  useFeedback,
+
+  // Status components
+  StatusBadge,
+  StatusDropdown,
+
+  // Status utilities
+  getStatusData,
+  getIconComponent,
+  normalizeStatusKey,
+  DEFAULT_STATUSES,
+
+  // Storage utilities
+  saveFeedbackToLocalStorage,
+
+  // Theme utilities
+  getTheme,
+  lightTheme,
+  darkTheme,
+
+  // General utilities
+  getElementInfo,
+  captureElementScreenshot,
+  getReactComponentInfo,
+  formatPath
+} from 'react-visual-feedback';
+```
+
+## Changelog
+
+### v1.5.0
+- **Added**: Manual feedback mode (`Alt+A`) - open form without selecting an element
+- **Added**: `defaultOpen` prop to automatically open form on mount
+- **Added**: Drag & Drop file upload support
+- **Added**: Support for generic file attachments (PDF, etc.)
+- **Improved**: Dark mode colors for better contrast and readability
+- **Improved**: Dashboard status badges now have solid backgrounds for better visibility
+- **Improved**: Screenshot preview in dashboard with zoom overlay
+
+### v1.4.2
+- **Fixed**: Modal state not resetting after submission (was showing "Sending..." on reopen)
+- **Added**: `Alt+W` keyboard shortcut for video recording
+- **Improved**: Custom status documentation - clarified that users control which statuses appear
+- **Fixed**: Prevented double submission by checking `isSubmitting` state
+
+### v1.4.1
+- **Fixed**: `Cannot read properties of undefined (reading 'icon')` error when status data is malformed
+- **Added**: `getStatusData()` utility function for safe status access with defaults
+- **Improved**: Defensive null checks in StatusBadge, StatusDropdown, and FeedbackDashboard
+- **Added**: Export of status utility functions for custom implementations
+
+### v1.4.0
+- **Added**: Screen recording with session replay
+- **Added**: Console and network log capture during recording
+- **Added**: Session replay component with expandable logs panel
+- **Improved**: Dashboard UI with video playback support
+
+### v1.3.0
+- **Added**: Canvas drawing and annotation support
+- **Added**: Download all feedback as ZIP
+
+### v1.2.0
+- **Added**: Custom status configurations
+- **Added**: Status normalization for various formats
+
+### v1.1.0
+- **Added**: Dark mode support
+- **Added**: Developer/User mode views
+
+### v1.0.0
+- Initial release with element selection and screenshot capture
 
 ## License
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { ChevronDown } from 'lucide-react';
-import { getIconComponent, normalizeStatusKey } from './StatusBadge.jsx';
+import { getIconComponent, normalizeStatusKey, getStatusData } from './StatusBadge.jsx';
 import { dropdownSlideIn } from '../theme.js';
 
 const DropdownContainer = styled.div`
@@ -29,6 +29,7 @@ const DropdownButton = styled.button`
   outline: none;
   min-width: 140px;
   box-sizing: border-box;
+  white-space: nowrap;
 
   svg {
     flex-shrink: 0;
@@ -40,6 +41,9 @@ const DropdownButton = styled.button`
   span {
     flex: 1;
     text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   ${AnimatedChevron} {
@@ -95,7 +99,7 @@ const DropdownItem = styled.button`
 `;
 
 
-export const StatusDropdown = ({ currentStatus, onStatusChange, itemId, statuses, theme }) => {
+export const StatusDropdown = ({ currentStatus, onStatusChange, itemId, statuses = {}, acceptableStatuses, theme }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -112,11 +116,26 @@ export const StatusDropdown = ({ currentStatus, onStatusChange, itemId, statuses
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const statusKey = normalizeStatusKey(currentStatus, statuses);
-  const currentStatusData = statuses[statusKey];
-  if (!currentStatusData) return null;
+  // Handle empty or invalid statuses gracefully
+  if (!statuses || typeof statuses !== 'object' || Object.keys(statuses).length === 0) {
+    return null;
+  }
 
+  // Filter statuses by acceptableStatuses if provided
+  const visibleStatuses = acceptableStatuses && Array.isArray(acceptableStatuses) && acceptableStatuses.length > 0
+    ? Object.fromEntries(
+        Object.entries(statuses).filter(([key]) => acceptableStatuses.includes(key))
+      )
+    : statuses;
+
+  if (Object.keys(visibleStatuses).length === 0) {
+    return null;
+  }
+
+  const statusKey = normalizeStatusKey(currentStatus, visibleStatuses);
+  const currentStatusData = getStatusData(statusKey, visibleStatuses);
   const IconComponent = getIconComponent(currentStatusData.icon);
+  const { color, textColor, bgColor, label } = currentStatusData;
 
   return (
     <DropdownContainer ref={dropdownRef}>
@@ -125,19 +144,22 @@ export const StatusDropdown = ({ currentStatus, onStatusChange, itemId, statuses
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        $statusColor={currentStatusData.color}
-        $textColor={currentStatusData.textColor}
-        $bgColor={currentStatusData.bgColor}
+        $statusColor={color}
+        $textColor={textColor}
+        $bgColor={bgColor}
       >
         <IconComponent size={14} />
-        <span>{currentStatusData.label}</span>
+        <span>{label}</span>
         <AnimatedChevron size={14} $isOpen={isOpen} />
       </DropdownButton>
 
       {isOpen && (
         <DropdownMenu theme={theme} onClick={(e) => e.stopPropagation()}>
-          {Object.entries(statuses).map(([key, data]) => {
-            const Icon = getIconComponent(data.icon);
+          {Object.entries(visibleStatuses).map(([key, data]) => {
+            // Skip invalid/undefined status entries
+            if (!data || typeof data !== 'object') return null;
+            const itemData = getStatusData(key, visibleStatuses);
+            const Icon = getIconComponent(itemData.icon);
             const isSelected = statusKey === key;
             return (
               <DropdownItem
@@ -148,12 +170,12 @@ export const StatusDropdown = ({ currentStatus, onStatusChange, itemId, statuses
                   setIsOpen(false);
                 }}
                 $isSelected={isSelected}
-                $bgColor={data.bgColor}
-                $textColor={data.textColor}
+                $bgColor={itemData.bgColor}
+                $textColor={itemData.textColor}
                 theme={theme}
               >
                 <Icon size={16} />
-                <span>{data.label}</span>
+                <span>{itemData.label}</span>
               </DropdownItem>
             );
           })}

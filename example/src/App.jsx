@@ -569,6 +569,8 @@ InstructionStep.displayName = 'InstructionStep';
 function KeyboardShortcuts() {
   const shortcuts = [
     { keys: 'Alt + Q', action: 'Activate Feedback' },
+    { keys: 'Alt + A', action: 'Manual Feedback Form' },
+    { keys: 'Alt + W', action: 'Start Recording' },
     { keys: 'Alt + Shift + Q', action: 'Open Dashboard' },
     { keys: 'Esc', action: 'Cancel/Close' },
   ];

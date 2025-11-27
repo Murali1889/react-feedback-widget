@@ -4,7 +4,7 @@ import styled, { ThemeProvider, keyframes } from 'styled-components';
 import { 
   X, Send, Paperclip, ChevronRight, 
   Monitor, Globe, Code, Layers, FileCode,
-  Copy, Check, Video
+  Copy, Check, Video, Upload, Image, Trash2, FileText
 } from 'lucide-react';
 import { getTheme } from './theme.js';
 import { formatPath } from './utils.js';
@@ -186,7 +186,69 @@ const StyledTextArea = styled.textarea`
   }
 `;
 
+const DragDropZone = styled.div`
+  border: 2px dashed ${props => props.$isDragging ? props.theme.colors.highlightBorder : props.theme.colors.border};
+  background: ${props => props.$isDragging ? props.theme.colors.highlightBg : props.theme.colors.inputBg};
+  border-radius: 12px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 120px;
+  text-align: center;
+
+  &:hover {
+    border-color: ${props => props.theme.colors.textSecondary};
+    background: ${props => props.theme.colors.hoverBg};
+  }
+`;
+
+const DropText = styled.p`
+  margin: 0;
+  font-size: 14px;
+  color: ${props => props.theme.colors.textSecondary};
+  font-weight: 500;
+`;
+
+const DropSubText = styled.p`
+  margin: 0;
+  font-size: 12px;
+  color: ${props => props.theme.colors.textTertiary};
+`;
+
 // --- ATTACHMENT CARD ---
+const UploadButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+`;
+
+const UploadButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.colors.border};
+  background: ${props => props.theme.colors.cardBg};
+  color: ${props => props.theme.colors.textSecondary};
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${props => props.theme.colors.textPrimary};
+    color: ${props => props.theme.colors.textPrimary};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px ${props => props.theme.colors.shadow};
+  }
+`;
+
 const AttachmentCard = styled.div`
   display: flex;
   align-items: center;
@@ -389,34 +451,107 @@ export const FeedbackModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [manualScreenshot, setManualScreenshot] = useState(null);
+  const [manualVideo, setManualVideo] = useState(null);
+  const [manualFile, setManualFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   const descriptionRef = useRef(null);
+  const screenshotInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   const theme = getTheme(mode);
 
   useEffect(() => {
     if (isOpen) {
-      // Reset state when modal opens
-      setFeedbackType(videoBlob ? 'bug' : 'bug'); // Default to bug report for video
+      // Reset ALL state when modal opens
+      setFeedbackType('bug');
       setDescription('');
+      setIsSubmitting(false);
       setShowDetails(false);
       setCopied(false);
+      setManualScreenshot(null);
+      setManualVideo(null);
+      setManualFile(null);
+      setIsDragging(false);
+      if (screenshotInputRef.current) screenshotInputRef.current.value = '';
+      if (videoInputRef.current) videoInputRef.current.value = '';
       setTimeout(() => descriptionRef.current?.focus(), 150);
     }
-  }, [isOpen, videoBlob]);
+  }, [isOpen]);
+
+  const handleFile = (file) => {
+    if (!file) return;
+    
+    // Reset other states
+    setManualScreenshot(null);
+    setManualVideo(null);
+    setManualFile(null);
+    
+    // Handle Images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => setManualScreenshot(reader.result);
+      reader.readAsDataURL(file);
+    } 
+    // Handle Videos
+    else if (file.type.startsWith('video/')) {
+      setManualVideo(file);
+    }
+    // Handle Other Files (PDF, etc.)
+    else {
+      setManualFile(file);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const items = e.dataTransfer.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file') {
+          handleFile(items[i].getAsFile());
+          return;
+        }
+      }
+    } else if (e.dataTransfer.files.length > 0) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleScreenshotUpload = (e) => {
+    handleFile(e.target.files[0]);
+  };
+
+  const handleVideoUpload = (e) => {
+    handleFile(e.target.files[0]);
+  };
 
   const handleSubmit = async () => {
-    if (!description.trim()) return;
+    if (!description.trim() || isSubmitting) return;
     setIsSubmitting(true);
 
     const feedbackData = {
       feedback: description.trim(),
       type: feedbackType,
-      
+
       // Conditionally add screenshot or video data
-      screenshot: videoBlob ? null : screenshot,
-      videoBlob: videoBlob || null,
+      screenshot: screenshot || manualScreenshot,
+      videoBlob: videoBlob || manualVideo,
+      attachment: manualFile,
       eventLogs: eventLogs || [],
-      
+
       // Meta data
       timestamp: new Date().toISOString(),
       url: window.location.href,
@@ -433,9 +568,14 @@ export const FeedbackModal = ({
 
     try {
       await onSubmit(feedbackData);
+      // Reset state after successful submission
+      setIsSubmitting(false);
+      setDescription('');
+      setFeedbackType('bug');
+      setManualScreenshot(null);
+      setManualVideo(null);
       // Parent component will handle closing
     } catch (error) {
-      console.error("Feedback submission failed:", error);
       setIsSubmitting(false);
     }
   };
@@ -448,14 +588,9 @@ export const FeedbackModal = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  console.log('[FeedbackModal] Render check - isOpen:', isOpen, 'videoBlob:', videoBlob, 'screenshot:', screenshot);
-
   if (!isOpen) {
-    console.log('[FeedbackModal] Not rendering - isOpen is false');
     return null;
   }
-
-  console.log('[FeedbackModal] Rendering modal!');
   const currentType = FEEDBACK_TYPES.find(t => t.id === feedbackType);
 
   return createPortal(
@@ -500,31 +635,107 @@ export const FeedbackModal = ({
             />
           </InputWrapper>
 
-          {/* Attachments */}
-          {screenshot && (
+          {/* Manual Upload Inputs */}
+          <input
+            type="file"
+            ref={screenshotInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleScreenshotUpload}
+          />
+          <input
+            type="file"
+            ref={videoInputRef}
+            accept="video/*"
+            style={{ display: 'none' }}
+            onChange={handleVideoUpload}
+          />
+
+          {/* Upload / Drag Drop Zone (if no attachments) */}
+          {!screenshot && !videoBlob && !manualScreenshot && !manualVideo && !manualFile && (
+            <DragDropZone
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              $isDragging={isDragging}
+              onClick={() => screenshotInputRef.current?.click()}
+            >
+              <Upload size={32} color={isDragging ? theme.colors.highlightBorder : theme.colors.textTertiary} />
+              <div>
+                <DropText>Click to upload or drag and drop</DropText>
+                <DropSubText>Images, Videos, PDF, or any file</DropSubText>
+              </div>
+              
+              <UploadButtons>
+                <UploadButton onClick={(e) => { e.stopPropagation(); screenshotInputRef.current?.click(); }}>
+                  <Image size={16} />
+                  Image
+                </UploadButton>
+                <UploadButton onClick={(e) => { e.stopPropagation(); videoInputRef.current?.click(); }}>
+                  <Video size={16} />
+                  Video
+                </UploadButton>
+              </UploadButtons>
+            </DragDropZone>
+          )}
+
+          {/* Attachments (System or Manual) */}
+          {(screenshot || manualScreenshot) && (
             <AttachmentCard>
-              <Thumbnail src={screenshot} />
+              <Thumbnail src={screenshot || manualScreenshot} />
               <AttachmentInfo>
                 <AttachmentName>Screenshot.png</AttachmentName>
                 <AttachmentMeta>
                   <Paperclip size={10} /> 
-                  Auto-attached from selection
+                  {screenshot ? 'Auto-attached' : 'Manually attached'}
                 </AttachmentMeta>
               </AttachmentInfo>
+              {manualScreenshot && (
+                <CloseButton onClick={() => setManualScreenshot(null)} style={{ marginLeft: 'auto' }}>
+                  <Trash2 size={16} color="#ef4444" />
+                </CloseButton>
+              )}
             </AttachmentCard>
           )}
 
-          {videoBlob && (
+          {(videoBlob || manualVideo) && (
             <AttachmentCard>
               <Thumbnail>
                 <Video size={24} />
               </Thumbnail>
               <AttachmentInfo>
-                <AttachmentName>Session Recording</AttachmentName>
+                <AttachmentName>
+                  {videoBlob ? 'Session Recording' : manualVideo.name}
+                </AttachmentName>
                 <AttachmentMeta>
-                  ~{(videoBlob.size / 1024 / 1024).toFixed(2)} MB - Includes console and network logs
+                  {videoBlob 
+                    ? `~${(videoBlob.size / 1024 / 1024).toFixed(2)} MB - Includes logs`
+                    : `${(manualVideo.size / 1024 / 1024).toFixed(2)} MB`
+                  }
                 </AttachmentMeta>
               </AttachmentInfo>
+              {manualVideo && (
+                <CloseButton onClick={() => setManualVideo(null)} style={{ marginLeft: 'auto' }}>
+                  <Trash2 size={16} color="#ef4444" />
+                </CloseButton>
+              )}
+            </AttachmentCard>
+          )}
+
+          {manualFile && (
+            <AttachmentCard>
+              <Thumbnail>
+                <FileText size={24} />
+              </Thumbnail>
+              <AttachmentInfo>
+                <AttachmentName>{manualFile.name}</AttachmentName>
+                <AttachmentMeta>
+                  {(manualFile.size / 1024 / 1024).toFixed(2)} MB
+                </AttachmentMeta>
+              </AttachmentInfo>
+              <CloseButton onClick={() => setManualFile(null)} style={{ marginLeft: 'auto' }}>
+                <Trash2 size={16} color="#ef4444" />
+              </CloseButton>
             </AttachmentCard>
           )}
 

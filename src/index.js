@@ -9,3 +9,12 @@ export * from './utils';
 
 // Export theme utilities for advanced users
 export { getTheme, lightTheme, darkTheme } from './theme';
+
+// Export status utilities for custom status handling
+export {
+  StatusBadge,
+  getIconComponent,
+  normalizeStatusKey,
+  getStatusData
+} from './components/StatusBadge';
+export { StatusDropdown } from './components/StatusDropdown';

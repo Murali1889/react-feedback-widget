@@ -96,6 +96,7 @@ const initialState = {
   isPaused: false,
   videoBlob: null,
   eventLogs: [],
+  isManualFeedbackOpen: false,
 };
 
 function feedbackReducer(state, action) {
@@ -116,6 +117,10 @@ function feedbackReducer(state, action) {
       return { ...state, isDashboardOpen: true };
     case 'CLOSE_DASHBOARD':
       return { ...state, isDashboardOpen: false };
+    case 'OPEN_MANUAL_FEEDBACK':
+      return { ...state, isManualFeedbackOpen: true, isModalOpen: true, screenshot: null, videoBlob: null };
+    case 'CLOSE_MANUAL_FEEDBACK':
+      return { ...state, isManualFeedbackOpen: false, isModalOpen: false };
     case 'START_RECORDING_INIT':
       return { ...state, isInitializing: true };
     case 'START_RECORDING_SUCCESS':
@@ -131,7 +136,7 @@ function feedbackReducer(state, action) {
     case 'STOP_RECORDING':
       return { ...state, isRecordingActive: false, isRecording: false, isInitializing: false, isPaused: false, videoBlob: action.payload.blob, eventLogs: action.payload.events, isModalOpen: action.payload.blob && action.payload.blob.size > 0 };
     case 'RESET_MODAL':
-      return { ...state, isModalOpen: false, selectedElement: null, screenshot: null, hoveredElement: null, hoveredComponentInfo: null, isCanvasActive: false, videoBlob: null, eventLogs: [] };
+      return { ...state, isModalOpen: false, isManualFeedbackOpen: false, selectedElement: null, screenshot: null, hoveredElement: null, hoveredComponentInfo: null, isCanvasActive: false, videoBlob: null, eventLogs: [] };
     default:
       return state;
   }
@@ -149,7 +154,8 @@ export const FeedbackProvider = ({
   userName,
   userEmail,
   onStatusChange,
-  mode = 'light'
+  mode = 'light',
+  defaultOpen = false
 }) => {
   const [state, dispatch] = useReducer(feedbackReducer, initialState);
   const {
@@ -170,11 +176,18 @@ export const FeedbackProvider = ({
     isPaused,
     videoBlob,
     eventLogs,
+    isManualFeedbackOpen
   } = state;
 
   // Determine if component is controlled
   const isControlled = controlledIsActive !== undefined;
   const isActive = isControlled ? controlledIsActive : internalIsActive;
+
+  useEffect(() => {
+    if (defaultOpen) {
+      dispatch({ type: 'OPEN_MANUAL_FEEDBACK' });
+    }
+  }, [defaultOpen]);
 
   // Handle state changes
   const setIsActive = useCallback((newValue) => {
@@ -251,37 +264,53 @@ export const FeedbackProvider = ({
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('[Feedback] Element clicked:', hoveredElement.tagName, hoveredElement.id || hoveredElement.className);
-
     dispatch({ type: 'START_CAPTURE', payload: hoveredElement });
 
     try {
-      console.log('[Feedback] Starting screenshot capture...');
       const screenshotData = await captureElementScreenshot(hoveredElement);
-      console.log('[Feedback] Screenshot captured:', screenshotData ? `${screenshotData.length} bytes` : 'null');
       dispatch({ type: 'COMPLETE_CAPTURE', payload: screenshotData });
     } catch (error) {
-      console.error('[Feedback] Screenshot error:', error);
       dispatch({ type: 'COMPLETE_CAPTURE', payload: null });
     }
   }, [isActive, hoveredElement]);
 
   const handleKeyDown = useCallback((e) => {
+    // Alt+Q - Activate feedback mode (element selection)
     if (e.altKey && !e.shiftKey && (e.key.toLowerCase() === 'q' || e.keyCode === 81 || e.code === 'KeyQ')) {
       e.preventDefault();
-      if (!isActive) {
+      if (!isActive && !isRecording) {
         setIsActive(true);
         dispatch({ type: 'SET_STATE', payload: { isCanvasActive: false } });
       }
       return;
     }
 
+    // Alt+A - Open form directly (Manual Feedback)
+    if (e.altKey && !e.shiftKey && (e.key.toLowerCase() === 'a' || e.keyCode === 65 || e.code === 'KeyA')) {
+      e.preventDefault();
+      if (!isModalOpen && !isActive && !isRecording) {
+        dispatch({ type: 'OPEN_MANUAL_FEEDBACK' });
+      }
+      return;
+    }
+
+    // Alt+W - Start video recording
+    if (e.altKey && !e.shiftKey && (e.key.toLowerCase() === 'w' || e.keyCode === 87 || e.code === 'KeyW')) {
+      e.preventDefault();
+      if (!isRecording && !isActive) {
+        handleStartRecording();
+      }
+      return;
+    }
+
+    // Alt+Shift+Q - Open dashboard
     if (dashboard && e.altKey && e.shiftKey && (e.key.toLowerCase() === 'q' || e.keyCode === 81 || e.code === 'KeyQ')) {
       e.preventDefault();
       dispatch({ type: 'OPEN_DASHBOARD' });
       return;
     }
 
+    // Escape - Cancel/close
     if (e.key === 'Escape') {
       e.preventDefault();
       if (isActive) {
@@ -292,7 +321,7 @@ export const FeedbackProvider = ({
         dispatch({ type: 'CLOSE_DASHBOARD' });
       }
     }
-  }, [isActive, isDashboardOpen, dashboard, setIsActive]);
+  }, [isActive, isDashboardOpen, dashboard, setIsActive, isRecording, handleStartRecording]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -331,15 +360,31 @@ export const FeedbackProvider = ({
 
   const handleFeedbackSubmit = useCallback(async (feedbackData) => {
     try {
-      if (dashboard) {
-        const result = await saveFeedbackToLocalStorage(feedbackData);
-        if (!result.success) {
-          throw new Error(result.error);
+      // Convert videoBlob to base64 if present
+      let processedData = { ...feedbackData };
+      if (feedbackData.videoBlob && feedbackData.videoBlob instanceof Blob) {
+        try {
+          const reader = new FileReader();
+          const videoBase64 = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(feedbackData.videoBlob);
+          });
+          processedData.video = videoBase64;
+          processedData.videoSize = feedbackData.videoBlob.size;
+          processedData.videoType = feedbackData.videoBlob.type;
+        } catch (videoError) {
+          // Video conversion failed silently
         }
+        delete processedData.videoBlob;
+      }
+
+      if (dashboard) {
+        await saveFeedbackToLocalStorage(processedData);
       }
 
       if (onSubmit && typeof onSubmit === 'function') {
-        await onSubmit(feedbackData);
+        await onSubmit(processedData);
       }
 
       setIsActive(false);
@@ -385,7 +430,6 @@ export const FeedbackProvider = ({
       dispatch({ type: 'STOP_HOVERING' });
       dispatch({ type: 'SET_STATE', payload: { selectedElement: null, screenshot: null } });
     } catch (error) {
-      console.error('Failed to submit feedback:', error);
     }
   }, [dashboard, onSubmit, userName, userEmail, setIsActive]);
 
@@ -400,7 +444,6 @@ export const FeedbackProvider = ({
       await recorder.start();
       dispatch({ type: 'START_RECORDING_SUCCESS' });
     } catch (error) {
-      console.error("Could not start recording:", error);
       dispatch({ type: 'START_RECORDING_FAILURE' });
       alert("Could not start recording. Please ensure you have granted screen and microphone permissions.");
     }
@@ -447,7 +490,6 @@ export const FeedbackProvider = ({
 
   const tooltipContent = getTooltipContent();
 
-  console.log('[FeedbackProvider] Rendering - isModalOpen:', isModalOpen, 'videoBlob:', videoBlob);
 
   return (
     <FeedbackContext.Provider value={{ isActive, setIsActive, setIsDashboardOpen, startRecording: handleStartRecording }}>
@@ -495,6 +537,7 @@ export const FeedbackProvider = ({
           userName={userName}
           userEmail={userEmail}
           mode={mode}
+          isManual={isManualFeedbackOpen}
         />
 
         <CanvasOverlay

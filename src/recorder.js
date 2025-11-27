@@ -73,16 +73,14 @@ export class SessionRecorder {
   // ===================================================================
 
   _patchFetch() {
-    if (this.originalFetch) return; // Already patched
+    if (this.originalFetch) return;
     this.originalFetch = window.fetch;
     const self = this;
-    console.log('[Recorder] Patching fetch');
 
     window.fetch = async function(...args) {
       const [input, options] = args;
       const url = input instanceof Request ? input.url : input.toString();
       const method = options?.method || (input instanceof Request ? input.method : 'GET');
-      console.log('[Recorder] Captured fetch:', method, url);
 
       let requestBody;
       let requestHeaders = options?.headers || {};
@@ -92,7 +90,6 @@ export class SessionRecorder {
         try {
           requestBody = await input.clone().text();
         } catch (e) {
-          // Body might be already read, a stream, or not cloneable.
           requestBody = '[Could not read or clone request body]';
         }
       } else if (options?.body) {
@@ -133,31 +130,28 @@ export class SessionRecorder {
           headers: self._safeStringify(Object.fromEntries(response.headers)),
           body: self._safeStringify(responseBody),
         };
-        
-        console.log('[Recorder] Fetch completed:', method, url, response.status);
+
         return response;
       } catch (error) {
         requestEvent.status = 'error';
         requestEvent.error = error.message;
         requestEvent.duration = self._getTimestamp() - requestEvent.timestamp;
-        console.log('[Recorder] Fetch error:', method, url, error.message);
         throw error;
       }
     };
   }
 
   _patchXHR() {
-    if (this.originalXHROpen) return; // Already patched
+    if (this.originalXHROpen) return;
     const self = this;
     this.originalXHROpen = XMLHttpRequest.prototype.open;
     this.originalXHRSend = XMLHttpRequest.prototype.send;
     this.originalXHRSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
-    console.log('[Recorder] Patching XHR');
 
     XMLHttpRequest.prototype.open = function(method, url, ...rest) {
       this._recorderMethod = method;
       this._recorderUrl = url;
-      this._recorderRequestHeaders = {}; // Init headers object
+      this._recorderRequestHeaders = {};
       return self.originalXHROpen.apply(this, [method, url, ...rest]);
     };
 
@@ -170,7 +164,6 @@ export class SessionRecorder {
 
     XMLHttpRequest.prototype.send = function(body) {
       const xhr = this;
-      console.log('[Recorder] Captured XHR:', xhr._recorderMethod, xhr._recorderUrl);
 
       const requestEvent = {
         type: 'network',
@@ -218,8 +211,6 @@ export class SessionRecorder {
           headers: self._safeStringify(responseHeaders),
           body: self._safeStringify(responseBody),
         };
-        
-        console.log('[Recorder] XHR completed:', xhr._recorderMethod, xhr._recorderUrl, xhr.status);
       });
 
       xhr.addEventListener('error', () => {
@@ -261,7 +252,6 @@ export class SessionRecorder {
   _patchStorage() {
     const self = this;
 
-    // Patch setItem
     this.originalStorageSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function(key, value) {
       const storageType = this === window.localStorage ? 'localStorage' :
@@ -279,7 +269,6 @@ export class SessionRecorder {
       return self.originalStorageSetItem.apply(this, [key, value]);
     };
 
-    // Patch removeItem
     this.originalStorageRemoveItem = Storage.prototype.removeItem;
     Storage.prototype.removeItem = function(key) {
       const storageType = this === window.localStorage ? 'localStorage' :
@@ -296,7 +285,6 @@ export class SessionRecorder {
       return self.originalStorageRemoveItem.apply(this, [key]);
     };
 
-    // Patch clear
     this.originalStorageClear = Storage.prototype.clear;
     Storage.prototype.clear = function() {
       const storageType = this === window.localStorage ? 'localStorage' :
@@ -423,25 +411,18 @@ export class SessionRecorder {
 
   async _getStream() {
     try {
-      // Get screen share - prefer current tab
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           cursor: 'always',
-          displaySurface: 'browser' // Prefer browser tab
+          displaySurface: 'browser'
         },
-        audio: true, // Try to get system audio
-        preferCurrentTab: true, // Default to current tab in the picker
-        selfBrowserSurface: 'include' // Include current tab as option
+        audio: true,
+        preferCurrentTab: true,
+        selfBrowserSurface: 'include'
       });
 
-      console.log('[Recorder] Got screen stream');
-      console.log('[Recorder] Video tracks:', screenStream.getVideoTracks().length);
-      console.log('[Recorder] Audio tracks:', screenStream.getAudioTracks().length);
-
-      // Use the screen stream directly
       this.stream = screenStream;
 
-      // Try to add microphone audio (optional)
       try {
         const micStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true }
@@ -449,36 +430,26 @@ export class SessionRecorder {
         micStream.getAudioTracks().forEach(track => {
           this.stream.addTrack(track);
         });
-        console.log('[Recorder] Added microphone audio');
       } catch (micError) {
-        console.warn('[Recorder] Could not get microphone:', micError.message);
+        // Microphone not available, continue without it
       }
 
-      // Monitor video track state
       const videoTrack = this.stream.getVideoTracks()[0];
       if (videoTrack) {
-        console.log('[Recorder] Video track state:', videoTrack.readyState, 'enabled:', videoTrack.enabled);
         videoTrack.addEventListener('ended', () => {
-          console.log('[Recorder] Video track ended');
           this.stop();
-        });
-        videoTrack.addEventListener('mute', () => {
-          console.log('[Recorder] Video track muted');
         });
       }
 
       return this.stream;
     } catch (error) {
-      console.error('[Recorder] Failed to get media stream:', error);
       this.status = 'idle';
       throw error;
     }
   }
 
   async start() {
-    // If not idle, force cleanup first
     if (this.status !== 'idle') {
-      console.warn('[Recorder] Not idle, forcing cleanup. Status was:', this.status);
       this._cleanup();
     }
 
@@ -486,17 +457,12 @@ export class SessionRecorder {
     this.events = [];
     this.recordedChunks = [];
 
-    // Get stream FIRST (before patching anything)
     await this._getStream();
 
     if (!this.stream) {
       this.status = 'idle';
       throw new Error('Failed to acquire a stream to record.');
     }
-
-    // Check if stream tracks are active
-    const videoTrack = this.stream.getVideoTracks()[0];
-    console.log('[Recorder] Video track:', videoTrack?.label, 'enabled:', videoTrack?.enabled, 'readyState:', videoTrack?.readyState);
 
     const supportedMimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(
       type => MediaRecorder.isTypeSupported(type)
@@ -506,46 +472,33 @@ export class SessionRecorder {
       throw new Error('No suitable MIME type found for MediaRecorder.');
     }
 
-    console.log('[Recorder] Using mimeType:', supportedMimeType);
-
     this.mediaRecorder = new MediaRecorder(this.stream, { mimeType: supportedMimeType });
 
     this.mediaRecorder.ondataavailable = (event) => {
-      console.log('[Recorder] ondataavailable:', event.data.size, 'bytes');
       if (event.data.size > 0) {
         this.recordedChunks.push(event.data);
-        console.log('[Recorder] Chunk added, total chunks:', this.recordedChunks.length);
       }
     };
 
     this.mediaRecorder.onstart = () => {
-      console.log('[Recorder] MediaRecorder started');
       this.status = 'recording';
     };
 
     this.mediaRecorder.onpause = () => { this.status = 'paused'; };
     this.mediaRecorder.onresume = () => { this.status = 'recording'; };
-    this.mediaRecorder.onerror = (e) => {
-      console.error('[Recorder] MediaRecorder error:', e.error);
+    this.mediaRecorder.onerror = () => {
       this.status = 'idle';
     };
 
-    // Start recording - use timeslice to get data periodically
-    this.mediaRecorder.start(1000); // Get data every 1 second
-    console.log('[Recorder] Called mediaRecorder.start(1000)');
-
-    // Set status immediately (don't wait for onstart)
+    this.mediaRecorder.start(1000);
     this.status = 'recording';
 
-    // NOW start capturing events (after video recording has started)
-    // This ensures we only capture events that happen during the recording
     this.startTime = Date.now();
     this._patchConsole();
     this._patchFetch();
     this._patchXHR();
     this._patchStorage();
     this._patchIndexedDB();
-    console.log('[Recorder] Started capturing events');
 
     return this.stream;
   }
@@ -563,19 +516,6 @@ export class SessionRecorder {
   }
 
   stop() {
-    console.log('[Recorder] stop() called, current status:', this.status);
-    console.log('[Recorder] mediaRecorder state:', this.mediaRecorder?.state);
-    console.log('[Recorder] recordedChunks:', this.recordedChunks.length, 'chunks');
-    console.log('[Recorder] Total events captured:', this.events.length);
-
-    // Log event summary
-    const eventSummary = this.events.reduce((acc, e) => {
-      acc[e.type] = (acc[e.type] || 0) + 1;
-      return acc;
-    }, {});
-    console.log('[Recorder] Events by type:', eventSummary);
-
-    // Unpatch all methods immediately
     this._unpatchConsole();
     this._unpatchFetch();
     this._unpatchXHR();
@@ -584,7 +524,6 @@ export class SessionRecorder {
 
     return new Promise((resolve) => {
       if (!this.mediaRecorder) {
-        console.log('[Recorder] No mediaRecorder, returning null');
         this._cleanup();
         return resolve({ videoBlob: null, events: this.events });
       }
@@ -593,32 +532,16 @@ export class SessionRecorder {
       const currentChunks = this.recordedChunks;
       const currentEvents = [...this.events];
 
-      // Handle the onstop event
       this.mediaRecorder.onstop = () => {
-        console.log('[Recorder] onstop fired');
-        console.log('[Recorder] Final chunks count:', currentChunks.length);
-
-        // Calculate total size
-        const totalSize = currentChunks.reduce((acc, chunk) => acc + chunk.size, 0);
-        console.log('[Recorder] Total data size:', totalSize, 'bytes');
-
         const videoBlob = new Blob(currentChunks, { type: mimeType });
-        console.log('[Recorder] Created blob:', videoBlob.size, 'bytes, type:', videoBlob.type);
-
         this._cleanup();
         resolve({ videoBlob, events: currentEvents });
       };
 
-      // Request any pending data and stop
       if (this.mediaRecorder.state === 'recording' || this.mediaRecorder.state === 'paused') {
-        console.log('[Recorder] Requesting final data and stopping...');
-        this.mediaRecorder.requestData(); // Get any buffered data
+        this.mediaRecorder.requestData();
         this.mediaRecorder.stop();
       } else {
-        console.log('[Recorder] MediaRecorder state is:', this.mediaRecorder.state);
-        // Already inactive, just create blob from existing chunks
-        const totalSize = currentChunks.reduce((acc, chunk) => acc + chunk.size, 0);
-        console.log('[Recorder] Already inactive, total data:', totalSize, 'bytes');
         const videoBlob = new Blob(currentChunks, { type: mimeType });
         this._cleanup();
         resolve({ videoBlob, events: currentEvents });
@@ -627,15 +550,13 @@ export class SessionRecorder {
   }
 
   _cleanup() {
-    // Stop all tracks
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
     }
-    // Reset all state for next recording
     this.mediaRecorder = null;
     this.recordedChunks = [];
-    this.status = 'idle'; // Reset to idle so we can start again
+    this.status = 'idle';
     this.startTime = null;
   }
 }
