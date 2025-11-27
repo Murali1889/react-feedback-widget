@@ -1319,7 +1319,7 @@ export const FeedbackDashboard = ({
       const folderName = `feedback-${item.id}`;
       
       // Separate media from the rest of the data
-      const { screenshot, video, ...metadata } = item;
+      const { screenshot, video, attachment, ...metadata } = item;
       
       // Add metadata as a JSON file
       zip.file(`${folderName}/details.json`, JSON.stringify(metadata, null, 2));
@@ -1345,6 +1345,17 @@ export const FeedbackDashboard = ({
           zip.file(`${folderName}/recording.webm`, videoBlob);
         } catch (e) {
           console.error(`Failed to process video for feedback ${item.id}`, e);
+        }
+      }
+
+      if (attachment) {
+        try {
+          const attachmentBlob = await dataURLToBlob(attachment.data);
+          // Use original filename if available, otherwise default
+          const filename = attachment.name || 'attachment.file';
+          zip.file(`${folderName}/${filename}`, attachmentBlob);
+        } catch (e) {
+          console.error(`Failed to process attachment for feedback ${item.id}`, e);
         }
       }
     }
@@ -1776,12 +1787,12 @@ export const saveFeedbackToLocalStorage = async (feedbackData) => {
     // If the quota is exceeded even after trimming, it's likely the new item itself is too large.
     // As a fallback, we try to save it again without the screenshot/video data.
     if (error.name === 'QuotaExceededError') {
-      console.warn('[FeedbackDashboard] Quota exceeded. Attempting to save feedback without media.');
-      try {
-        const { screenshot, video, videoBlob, ...feedbackWithoutMedia } = feedbackData;
-
-        const stored = localStorage.getItem(FEEDBACK_STORAGE_KEY);
-        let existing = stored ? JSON.parse(stored) : [];
+              console.warn('[FeedbackDashboard] Quota exceeded. Attempting to save feedback without media.');
+            try {
+              // Strip all media including attachment
+              const { screenshot, video, videoBlob, attachment, ...feedbackWithoutMedia } = feedbackData;
+      
+              const stored = localStorage.getItem(FEEDBACK_STORAGE_KEY);        let existing = stored ? JSON.parse(stored) : [];
 
         if (existing.length >= MAX_FEEDBACK_ITEMS) {
           existing = existing.slice(0, MAX_FEEDBACK_ITEMS - 1);
