@@ -421,24 +421,82 @@ export class SessionRecorder {
         selfBrowserSurface: 'include'
       });
 
-      this.stream = screenStream;
+      let finalStream = new MediaStream();
+      screenStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
+
+      let audioContext;
+      let hasAudio = false;
 
       try {
-        const micStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true }
-        });
-        micStream.getAudioTracks().forEach(track => {
-          this.stream.addTrack(track);
-        });
-      } catch (micError) {
-        // Microphone not available, continue without it
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioContext = new AudioContextClass();
+          const destination = audioContext.createMediaStreamDestination();
+
+          // 1. Add System Audio (if shared)
+          if (screenStream.getAudioTracks().length > 0) {
+            const systemSource = audioContext.createMediaStreamSource(screenStream);
+            const systemGain = audioContext.createGain();
+            systemGain.gain.value = 1.0;
+            systemSource.connect(systemGain).connect(destination);
+            hasAudio = true;
+          }
+
+          // 2. Add Microphone Audio
+          try {
+            const micStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              }
+            });
+
+            if (micStream.getAudioTracks().length > 0) {
+              const micSource = audioContext.createMediaStreamSource(micStream);
+              const micGain = audioContext.createGain();
+              micGain.gain.value = 1.0;
+              micSource.connect(micGain).connect(destination);
+              hasAudio = true;
+              
+              this.micStream = micStream;
+            }
+          } catch (micError) {
+            console.warn('Microphone access denied or not available:', micError);
+          }
+
+          if (hasAudio) {
+            if (audioContext.state === 'suspended') {
+              await audioContext.resume();
+            }
+            const mixedAudioTrack = destination.stream.getAudioTracks()[0];
+            finalStream.addTrack(mixedAudioTrack);
+          }
+          
+          this.audioContext = audioContext;
+        }
+      } catch (audioContextError) {
+        console.warn('AudioContext setup failed, falling back to system audio only:', audioContextError);
+        if (screenStream.getAudioTracks().length > 0) {
+           finalStream.addTrack(screenStream.getAudioTracks()[0]);
+        }
       }
 
-      const videoTrack = this.stream.getVideoTracks()[0];
+      if (!hasAudio && screenStream.getAudioTracks().length > 0 && finalStream.getAudioTracks().length === 0) {
+         finalStream.addTrack(screenStream.getAudioTracks()[0]);
+      }
+
+      this.stream = finalStream;
+      this.screenStream = screenStream;
+
+      const videoTrack = finalStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.addEventListener('ended', () => {
           this.stop();
         });
+        screenStream.getVideoTracks()[0].onended = () => {
+            this.stop();
+        };
       }
 
       return this.stream;
@@ -554,6 +612,19 @@ export class SessionRecorder {
       this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
     }
+    if (this.screenStream) {
+      this.screenStream.getTracks().forEach(track => track.stop());
+      this.screenStream = null;
+    }
+    if (this.micStream) {
+      this.micStream.getTracks().forEach(track => track.stop());
+      this.micStream = null;
+    }
+    if (this.audioContext) {
+      this.audioContext.close().catch(console.error);
+      this.audioContext = null;
+    }
+
     this.mediaRecorder = null;
     this.recordedChunks = [];
     this.status = 'idle';

@@ -130,8 +130,7 @@ const HeaderTop = styled.div`
 const HeaderBottom = styled.div`
   padding: 12px 24px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 16px;
   background-color: ${props => props.theme.colors.headerBg};
 `;
@@ -250,14 +249,16 @@ const FilterTabs = styled.div`
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
 `;
 
 const SearchContainer = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-  flex: 1;
-  max-width: 240px;
+  width: 100%;
+  max-width: none;
 `;
 
 const SearchInput = styled.input`
@@ -294,8 +295,8 @@ const SearchIconWrapper = styled.div`
 const FilterTab = styled.button`
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 4px;
+  padding: 6px 10px;
   border: 1px solid ${props => {
     if (props.$isActive) {
       if (props.$isAll) return props.theme.mode === 'dark' ? '#3b82f6' : '#3b82f6';
@@ -303,7 +304,7 @@ const FilterTab = styled.button`
     }
     return props.theme.colors.border;
   }};
-  border-radius: 20px;
+  border-radius: 16px;
   background-color: ${props => {
     if (props.$isActive) {
       if (props.$isAll) return props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)';
@@ -318,7 +319,7 @@ const FilterTab = styled.button`
     }
     return props.theme.colors.textSecondary;
   }};
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -337,14 +338,14 @@ const FilterCount = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   background: ${props => props.$isActive
     ? 'rgba(0, 0, 0, 0.1)'
     : props.theme.colors.hoverBg};
-  border-radius: 10px;
-  font-size: 11px;
+  border-radius: 8px;
+  font-size: 10px;
   font-weight: 700;
 `;
 
