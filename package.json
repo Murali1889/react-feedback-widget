@@ -1,6 +1,6 @@
 {
   "name": "react-visual-feedback",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "A visual feedback widget for React applications with element selection, screenshot capture, professional dashboard, and Jira/Google Sheets integrations",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
