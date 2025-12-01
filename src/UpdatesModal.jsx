@@ -339,6 +339,7 @@ const formatDate = (dateString) => {
 export const UpdatesModal = ({
   isOpen,
   onClose,
+  onUpdatesSeen,
   updates = [],
   title = "What's New",
   mode = 'light'
@@ -368,9 +369,12 @@ export const UpdatesModal = ({
     return sortedUpdates.filter(u => u.type === filter);
   }, [sortedUpdates, filter]);
 
-  // Reset filter when modal closes
+  // Reset filter when modal closes and notify about seen updates
   const handleClose = () => {
     setFilter('solved');
+    if (onUpdatesSeen) {
+      onUpdatesSeen(updates);
+    }
     onClose();
   };
 
