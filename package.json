@@ -1,6 +1,6 @@
 {
   "name": "react-visual-feedback",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "description": "A visual feedback widget for React applications with element selection, screenshot capture, professional dashboard, and Jira/Google Sheets integrations",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -52,6 +52,7 @@
   ],
   "author": "Murali <murali.g@hyperverge.co>",
   "license": "MIT",
+  "homepage": "https://react-library-demo-rosy.vercel.app/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Murali1889/react-feedback-widget.git"
