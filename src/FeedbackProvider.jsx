@@ -14,11 +14,12 @@ import { FeedbackDashboard, saveFeedbackToLocalStorage } from './FeedbackDashboa
 import { CanvasOverlay } from './CanvasOverlay.jsx';
 import { RecordingOverlay } from './RecordingOverlay.jsx';
 import { SubmissionQueue } from './SubmissionQueue.jsx';
-import ErrorToast, { showError, showSuccess } from './ErrorToast.jsx';
+import ErrorToast, { showError, showSuccess, showInfo } from './ErrorToast.jsx';
 import recorder from './recorder.js';
 import { getElementInfo, captureElementScreenshot, getReactComponentInfo } from './utils.js';
 import { getTheme, FeedbackGlobalStyle } from './theme.js';
 import { IntegrationClient } from './integrations/index.js';
+import { FeedbackDots } from './FeedbackDots.jsx';
 
 const FeedbackContext = createContext(null);
 
@@ -107,7 +108,10 @@ const initialState = {
   },
   lastIntegrationResults: null,
   // Submission queue state
-  submissionQueue: []
+  submissionQueue: [],
+  // Feedback dots state
+  showFeedbackDots: false,
+  clickPosition: null
 };
 
 function feedbackReducer(state, action) {
@@ -147,7 +151,7 @@ function feedbackReducer(state, action) {
     case 'STOP_RECORDING':
       return { ...state, isRecordingActive: false, isRecording: false, isInitializing: false, isPaused: false, videoBlob: action.payload.blob, eventLogs: action.payload.events, isModalOpen: action.payload.blob && action.payload.blob.size > 0 };
     case 'RESET_MODAL':
-      return { ...state, isModalOpen: false, isManualFeedbackOpen: false, selectedElement: null, screenshot: null, hoveredElement: null, hoveredComponentInfo: null, isCanvasActive: false, videoBlob: null, eventLogs: [], lastIntegrationResults: null };
+      return { ...state, isModalOpen: false, isManualFeedbackOpen: false, selectedElement: null, screenshot: null, hoveredElement: null, hoveredComponentInfo: null, isCanvasActive: false, videoBlob: null, eventLogs: [], lastIntegrationResults: null, clickPosition: null };
     // Integration actions
     case 'INTEGRATION_START':
       return {
@@ -202,6 +206,13 @@ function feedbackReducer(state, action) {
         ...state,
         submissionQueue: state.submissionQueue.filter(sub => sub.id !== action.payload)
       };
+    // Feedback dots actions
+    case 'TOGGLE_FEEDBACK_DOTS':
+      return { ...state, showFeedbackDots: !state.showFeedbackDots };
+    case 'SET_FEEDBACK_DOTS':
+      return { ...state, showFeedbackDots: action.payload };
+    case 'SET_CLICK_POSITION':
+      return { ...state, clickPosition: action.payload };
     default:
       return state;
   }
@@ -218,13 +229,17 @@ export const FeedbackProvider = ({
   isUser = true,
   userName,
   userEmail,
+  userAvatar,
   onStatusChange,
   mode = 'light',
   defaultOpen = false,
   // Integration configuration
   integrations = null,
   onIntegrationSuccess,
-  onIntegrationError
+  onIntegrationError,
+  // Feedback dots
+  showFeedbackDots: showFeedbackDotsProp,
+  feedbackDotsData
 }) => {
   const [state, dispatch] = useReducer(feedbackReducer, initialState);
   const {
@@ -248,7 +263,9 @@ export const FeedbackProvider = ({
     isManualFeedbackOpen,
     integrationStatus,
     lastIntegrationResults,
-    submissionQueue
+    submissionQueue,
+    showFeedbackDots,
+    clickPosition
   } = state;
 
   // Initialize integration client
@@ -285,6 +302,12 @@ export const FeedbackProvider = ({
     }
   }, [defaultOpen]);
 
+  useEffect(() => {
+    if (showFeedbackDotsProp !== undefined) {
+      dispatch({ type: 'SET_FEEDBACK_DOTS', payload: showFeedbackDotsProp });
+    }
+  }, [showFeedbackDotsProp]);
+
   // Handle state changes
   const setIsActive = useCallback((newValue) => {
     if (isControlled) {
@@ -298,6 +321,7 @@ export const FeedbackProvider = ({
 
   const overlayRef = useRef(null);
   const highlightRef = useRef(null);
+  const startRecordingRef = useRef(null);
 
   const theme = getTheme(mode);
 
@@ -312,7 +336,7 @@ export const FeedbackProvider = ({
       return false;
     }
 
-    if (element.closest('.feedback-overlay, .feedback-modal, .feedback-backdrop, .feedback-tooltip, .feedback-highlight')) {
+    if (element.closest('.feedback-overlay, .feedback-modal, .feedback-backdrop, .feedback-tooltip, .feedback-highlight, .feedback-dots-container')) {
       return false;
     }
 
@@ -371,6 +395,12 @@ export const FeedbackProvider = ({
     e.preventDefault();
     e.stopPropagation();
 
+    // Capture click position relative to the element (0-1 range)
+    const rect = hoveredElement.getBoundingClientRect();
+    const relativeX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const relativeY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    dispatch({ type: 'SET_CLICK_POSITION', payload: { relativeX, relativeY } });
+
     dispatch({ type: 'START_CAPTURE', payload: hoveredElement });
 
     try {
@@ -405,9 +435,16 @@ export const FeedbackProvider = ({
     // Alt+W - Start video recording
     if (e.altKey && !e.shiftKey && (e.key.toLowerCase() === 'w' || e.keyCode === 87 || e.code === 'KeyW')) {
       e.preventDefault();
-      if (!isRecording && !isActive) {
-        handleStartRecording();
+      if (!isRecording && !isActive && startRecordingRef.current) {
+        startRecordingRef.current();
       }
+      return;
+    }
+
+    // Alt+D - Toggle feedback dots
+    if (e.altKey && !e.shiftKey && (e.key.toLowerCase() === 'd' || e.keyCode === 68 || e.code === 'KeyD')) {
+      e.preventDefault();
+      dispatch({ type: 'TOGGLE_FEEDBACK_DOTS' });
       return;
     }
 
@@ -429,7 +466,7 @@ export const FeedbackProvider = ({
         dispatch({ type: 'CLOSE_DASHBOARD' });
       }
     }
-  }, [isActive, isDashboardOpen, dashboard, setIsActive, isRecording, handleStartRecording]);
+  }, [isActive, isDashboardOpen, dashboard, setIsActive, isRecording]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -647,6 +684,8 @@ export const FeedbackProvider = ({
     }
   }, []);
 
+  startRecordingRef.current = handleStartRecording;
+
   const handlePauseRecording = useCallback(() => {
     recorder.pause();
     dispatch({ type: 'PAUSE_RECORDING' });
@@ -702,7 +741,9 @@ export const FeedbackProvider = ({
       startRecording: handleStartRecording,
       integrationStatus,
       integrations,
-      integrationClient: integrationClientRef.current
+      integrationClient: integrationClientRef.current,
+      showFeedbackDots,
+      toggleFeedbackDots: () => dispatch({ type: 'TOGGLE_FEEDBACK_DOTS' })
     }}>
       <ThemeProvider theme={theme}>
         <FeedbackGlobalStyle />
@@ -748,9 +789,11 @@ export const FeedbackProvider = ({
           onAsyncSubmit={handleAsyncSubmit}
           userName={userName}
           userEmail={userEmail}
+          userAvatar={userAvatar}
           mode={mode}
           isManual={isManualFeedbackOpen}
           integrations={integrations}
+          clickPosition={clickPosition}
         />
 
         <CanvasOverlay
@@ -793,6 +836,13 @@ export const FeedbackProvider = ({
           submissions={submissionQueue}
           onDismiss={handleDismissSubmission}
           mode={mode}
+        />
+
+        <FeedbackDots
+          mode={mode}
+          isDeveloper={isDeveloper}
+          data={feedbackDotsData}
+          visible={showFeedbackDots && !isActive}
         />
       </ThemeProvider>
     </FeedbackContext.Provider>

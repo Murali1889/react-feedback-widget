@@ -38,6 +38,20 @@ export const lightTheme = {
     cardBg: '#ffffff',
     headerBg: '#f9fafb',
     contentBg: '#f9fafb',
+    // Feedback dots
+    dotBorder: '#ffffff',
+    dotPopoverBg: '#ffffff',
+    dotPopoverBorder: '#e5e7eb',
+    dotPopoverShadow: 'rgba(0, 0, 0, 0.15)',
+    dotMiniCardBg: '#ffffff',
+    dotMiniCardBorder: '#e5e7eb',
+    dotMiniCardShadow: 'rgba(0, 0, 0, 0.12)',
+    dotToolbarBg: '#ffffff',
+    dotToolbarBorder: '#e5e7eb',
+    dotToolbarShadow: 'rgba(0, 0, 0, 0.12)',
+    dotClusterBg: '#3b82f6',
+    dotClusterText: '#ffffff',
+    dotFocusRing: '#3b82f6',
   }
 };
 
@@ -78,6 +92,20 @@ export const darkTheme = {
     cardBg: '#1e293b',
     headerBg: '#0f172a',
     contentBg: '#020617', // Deepest black/slate for content background
+    // Feedback dots
+    dotBorder: '#1e293b',
+    dotPopoverBg: '#1e293b',
+    dotPopoverBorder: '#334155',
+    dotPopoverShadow: 'rgba(0, 0, 0, 0.4)',
+    dotMiniCardBg: '#1e293b',
+    dotMiniCardBorder: '#334155',
+    dotMiniCardShadow: 'rgba(0, 0, 0, 0.35)',
+    dotToolbarBg: '#1e293b',
+    dotToolbarBorder: '#334155',
+    dotToolbarShadow: 'rgba(0, 0, 0, 0.4)',
+    dotClusterBg: '#3b82f6',
+    dotClusterText: '#ffffff',
+    dotFocusRing: '#60a5fa',
   }
 };
 
@@ -195,6 +223,11 @@ export const FeedbackGlobalStyle = createGlobalStyle`
       display: none !important;
     }
   }
+`;
+
+export const dotPulse = keyframes`
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
 `;
 
 // Note: Status options are now managed in FeedbackDashboard.jsx

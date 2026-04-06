@@ -327,9 +327,11 @@ export const FeedbackModal = ({
   onSubmit,
   userName,
   userEmail,
+  userAvatar,
   mode = 'light',
   integrations = null,
-  onAsyncSubmit
+  onAsyncSubmit,
+  clickPosition
 }) => {
   const [feedbackType, setFeedbackType] = useState('bug');
   const [description, setDescription] = useState('');
@@ -425,8 +427,12 @@ export const FeedbackModal = ({
       },
       userName: userName,
       userEmail: userEmail,
+      userAvatar: userAvatar || null,
       selectedIntegrations: selectedIntegrations,
+      dotPosition: clickPosition || null,
     };
+
+    console.log('[FeedbackModal] Submitting with dotPosition:', feedbackData.dotPosition, 'selector:', feedbackData.elementInfo?.selector);
 
     // Close modal immediately and submit async
     onClose();

@@ -44,6 +44,20 @@ A powerful, visual feedback collection tool for React applications with screen r
 - **Mobile Responsive** - Works as a centered popup on all screen sizes
 - **Dark/Light Mode** - Full theme support
 
+### Feedback Dots (In-Context Overlay)
+- **Visual Dots** - Show feedback markers directly on the page at the exact position where feedback was submitted
+- **Avatar Markers** - User profile pictures or initial fallbacks with type-colored pips
+- **Mini Card on Hover** - Rich preview card with avatar, name, time, type, and feedback preview
+- **Detail Popover on Click** - Full feedback details with component info, source file, StatusBadge, and screenshot
+- **Dot Clustering** - Nearby dots collapse into a count badge, hover to fan out
+- **Filter Toolbar** - Filter dots by type (Bug/Feature/Improvement) and status (Open/Resolved)
+- **Element Highlighting** - Hovering a dot highlights the original element with a pulsing border
+- **Smart Positioning** - Popovers auto-flip to avoid viewport edges
+- **Keyboard Navigation** - Tab through dots, Enter to open, Escape to close
+- **Responsive** - Dot positions stored as percentages (0-1) relative to the element, works across screen sizes
+- **Backend Data Support** - Pass feedback data from your API via props, auto-normalizes DB field formats
+- **Dynamic Updates** - Data arriving late (e.g., from async API calls) updates dots in real-time
+
 ### Theming
 - **Light/Dark Mode** - Full theme support
 - **styled-components** - No external CSS required
@@ -142,6 +156,64 @@ function App() {
 }
 ```
 
+### With Feedback Dots (In-Context Overlay)
+
+Show feedback markers directly on the page at the exact positions where feedback was submitted.
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { FeedbackProvider } from 'react-visual-feedback';
+
+function App() {
+  const [feedback, setFeedback] = useState([]);
+
+  // Fetch feedback from your backend (data can arrive late)
+  useEffect(() => {
+    fetch('/api/feedback')
+      .then(res => res.json())
+      .then(data => setFeedback(data));
+  }, []);
+
+  return (
+    <FeedbackProvider
+      onSubmit={handleSubmit}
+      dashboard={true}
+      userName="Alice"
+      userEmail="alice@example.com"
+      userAvatar="https://example.com/avatar.jpg"
+      showFeedbackDots={true}
+      feedbackDotsData={feedback}
+    >
+      <YourApp />
+    </FeedbackProvider>
+  );
+}
+```
+
+**How it works:**
+1. User presses `Alt+Q`, clicks an element, submits feedback
+2. The exact click position is captured as percentages (0-1) relative to the element
+3. User presses `Alt+D` (or `showFeedbackDots={true}`) to see dots on the page
+4. Dots appear at the exact positions with avatars, type indicators, and hover cards
+
+**Backend data format — both formats are auto-normalized:**
+
+```js
+// Widget format (camelCase)
+{ dotPosition: { relativeX: 0.43, relativeY: 0.67 }, elementInfo: { selector: "..." } }
+
+// DB format (snake_case) — also works
+{ dot_position_x: 0.43, dot_position_y: 0.67, elementinfo: "{\"selector\":\"...\"}" }
+```
+
+**Role-based visibility:**
+```jsx
+<FeedbackProvider
+  showFeedbackDots={user.role === 'developer'}
+  feedbackDotsData={user.role === 'developer' ? feedback : undefined}
+>
+```
+
 ## API Reference
 
 ### FeedbackProvider Props
@@ -156,10 +228,13 @@ function App() {
 | `isUser` | `boolean` | `true` | Enable user mode |
 | `userName` | `string` | `'Anonymous'` | User name |
 | `userEmail` | `string` | `null` | User email |
+| `userAvatar` | `string` | `null` | User profile picture URL |
 | `mode` | `'light' \| 'dark'` | `'light'` | Theme mode |
 | `isActive` | `boolean` | - | Controlled active state |
 | `onActiveChange` | `(active) => void` | - | Callback for controlled mode |
 | `defaultOpen` | `boolean` | `false` | Open manual feedback form immediately on mount |
+| `showFeedbackDots` | `boolean` | `false` | Show/hide feedback dot markers on the page |
+| `feedbackDotsData` | `Array` | `null` | Feedback data from your backend (auto-normalizes DB formats) |
 
 ### FeedbackDashboard Props
 
@@ -187,7 +262,9 @@ const {
   isActive,           // boolean - feedback mode active
   setIsActive,        // (active: boolean) => void
   setIsDashboardOpen, // (open: boolean) => void
-  startRecording      // () => void - start screen recording
+  startRecording,     // () => void - start screen recording
+  showFeedbackDots,   // boolean - feedback dots visible
+  toggleFeedbackDots  // () => void - toggle feedback dots on/off
 } = useFeedback();
 ```
 
@@ -283,6 +360,15 @@ interface FeedbackData {
   viewport: {
     width: number;
     height: number;
+  };
+
+  // User
+  userAvatar?: string;           // Profile picture URL
+
+  // Dot position (for feedback dots overlay)
+  dotPosition?: {
+    relativeX: number;           // 0-1 click position within element (horizontal)
+    relativeY: number;           // 0-1 click position within element (vertical)
   };
 
   // Attachments
@@ -690,6 +776,7 @@ app.patch('/api/feedback/:id/status', async (req, res) => {
 | `Alt+Q` | Activate feedback mode (element selection) |
 | `Alt+A` | Open Manual Feedback form |
 | `Alt+W` | Start screen recording |
+| `Alt+D` | Toggle feedback dots overlay |
 | `Alt+Shift+Q` | Open dashboard |
 | `Esc` | Cancel/close |
 
@@ -928,6 +1015,7 @@ import {
   FeedbackModal,
   FeedbackDashboard,
   FeedbackTrigger,
+  FeedbackDots,          // In-context feedback dot markers
   CanvasOverlay,
   UpdatesModal,          // What's New modal for updates
 
@@ -961,6 +1049,24 @@ import {
 ```
 
 ## Changelog
+
+### v2.2.10
+- **Added**: Feedback Dots — in-context overlay that shows feedback markers directly on the page
+- **Added**: `showFeedbackDots` prop and `Alt+D` keyboard shortcut to toggle dots
+- **Added**: `feedbackDotsData` prop to pass feedback from backend APIs (auto-normalizes DB formats)
+- **Added**: `userAvatar` prop for user profile pictures on dots and feedback data
+- **Added**: `dotPosition` field auto-captured on element click (relative position 0-1, responsive across screen sizes)
+- **Added**: Mini card on dot hover — avatar, name, time, type pill, 2-line preview, component chip
+- **Added**: Premium popover on dot click — header with avatar/name/email, hero text, component/file chips, StatusBadge, screenshot with zoom
+- **Added**: Dot clustering — nearby dots collapse into count badges, hover to fan out
+- **Added**: Filter toolbar — fixed bottom-center bar with type and status filters
+- **Added**: Element highlighting on dot hover — pulsing colored border around the original element
+- **Added**: Keyboard navigation — Tab through dots, Enter/Space to open, Escape to close
+- **Added**: Smart viewport-aware positioning for popovers and mini cards
+- **Added**: Console diagnostics for debugging data format issues
+- **Added**: `FeedbackDots` standalone component export
+- **Added**: `toggleFeedbackDots` and `showFeedbackDots` in `useFeedback()` hook
+- **Improved**: Dots always mounted (data loads in background), reactive to late-arriving prop data
 
 ### v2.2.0
 - **Added**: `UpdatesModal` component - Display product updates, bug fixes, and new features

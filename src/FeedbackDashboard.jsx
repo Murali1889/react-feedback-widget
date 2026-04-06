@@ -1058,6 +1058,7 @@ export const saveFeedbackToLocalStorage = async (feedbackData) => {
 
     console.log('Saving feedback with videoRef:', newFeedback.videoRef);
     localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify([newFeedback, ...existing].slice(0, 50)));
+    window.dispatchEvent(new CustomEvent('feedback-data-updated'));
     return { success: true, data: newFeedback };
   } catch (e) {
     console.error('Error saving feedback:', e);
