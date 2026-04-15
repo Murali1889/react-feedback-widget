@@ -279,8 +279,7 @@ export const FeedbackProvider = ({
   showFeedbackDots: showFeedbackDotsProp,
   feedbackDotsData,
   // Mobile
-  enableShake = true,
-  enableMobileScreenshot = false
+  enableMobileFeedback = true
 }) => {
   const [state, dispatch] = useReducer(feedbackReducer, initialState);
   const {
@@ -604,40 +603,7 @@ export const FeedbackProvider = ({
     return () => document.removeEventListener('touchstart', handleTouchSelect);
   }, [isTouchDevice, isActive, isCanvasActive, isModalOpen, handleTouchSelect]);
 
-  // --- Mobile: shake detection ---
-  useEffect(() => {
-    if (!enableShake || !isTouchDevice) return;
-
-    const SHAKE_THRESHOLD = 15;
-    const SHAKE_COOLDOWN = 2000;
-    let lastShakeTime = 0;
-    let lastX = null, lastY = null, lastZ = null;
-
-    const handleMotion = (e) => {
-      const { x, y, z } = e.accelerationIncludingGravity || {};
-      if (x == null || y == null || z == null) return;
-
-      if (lastX !== null) {
-        const delta = Math.abs(x - lastX) + Math.abs(y - lastY) + Math.abs(z - lastZ);
-        const now = Date.now();
-
-        if (delta > SHAKE_THRESHOLD && now - lastShakeTime > SHAKE_COOLDOWN) {
-          lastShakeTime = now;
-          if (!isActive && !isRecording && !isModalOpen) {
-            setIsActive(true);
-            dispatch({ type: 'SET_STATE', payload: { isCanvasActive: false } });
-          }
-        }
-      }
-
-      lastX = x; lastY = y; lastZ = z;
-    };
-
-    window.addEventListener('devicemotion', handleMotion);
-    return () => window.removeEventListener('devicemotion', handleMotion);
-  }, [enableShake, isTouchDevice, isActive, isRecording, isModalOpen, setIsActive]);
-
-  // --- Screenshot mode (for mobile screenshot button) ---
+  // --- Mobile: activate feedback mode ---
   const openScreenshotMode = useCallback(() => {
     if (!isActive && !isRecording) {
       setIsActive(true);
@@ -1000,8 +966,21 @@ export const FeedbackProvider = ({
           visible={showFeedbackDots && !isActive}
         />
 
-        {enableMobileScreenshot && isTouchDevice && (
-          <MobileTrigger mode={mode} onScreenshot={openScreenshotMode} isActive={isActive} />
+        {enableMobileFeedback && isTouchDevice && (
+          <MobileTrigger
+            mode={mode}
+            isActive={isActive}
+            onActivate={() => {
+              if (!isActive && !isRecording) {
+                setIsActive(true);
+                dispatch({ type: 'SET_STATE', payload: { isCanvasActive: false } });
+              }
+            }}
+            onCancel={() => {
+              setIsActive(false);
+              dispatch({ type: 'RESET_MODAL' });
+            }}
+          />
         )}
       </ThemeProvider>
     </FeedbackContext.Provider>
