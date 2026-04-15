@@ -6,6 +6,7 @@ export { FeedbackDashboard, saveFeedbackToLocalStorage, DEFAULT_STATUSES } from 
 export { FeedbackTrigger } from './FeedbackTrigger';
 export { CanvasOverlay } from './CanvasOverlay';
 export { FeedbackDots } from './FeedbackDots';
+export { MobileTrigger } from './MobileTrigger';
 export { UpdatesModal } from './UpdatesModal';
 export { SubmissionQueue } from './SubmissionQueue';
 export * from './utils';

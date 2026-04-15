@@ -20,6 +20,7 @@ import { getElementInfo, captureElementScreenshot, getReactComponentInfo } from 
 import { getTheme, FeedbackGlobalStyle } from './theme.js';
 import { IntegrationClient } from './integrations/index.js';
 import { FeedbackDots } from './FeedbackDots.jsx';
+import { MobileTrigger } from './MobileTrigger.jsx';
 
 const FeedbackContext = createContext(null);
 
@@ -239,7 +240,10 @@ export const FeedbackProvider = ({
   onIntegrationError,
   // Feedback dots
   showFeedbackDots: showFeedbackDotsProp,
-  feedbackDotsData
+  feedbackDotsData,
+  // Mobile
+  enableShake = true,
+  enableMobileScreenshot = true
 }) => {
   const [state, dispatch] = useReducer(feedbackReducer, initialState);
   const {
@@ -503,6 +507,107 @@ export const FeedbackProvider = ({
     }
   }, [isActive, isCanvasActive, isModalOpen, handleMouseMove, handleElementClick]);
 
+  // --- Mobile: detect touch device ---
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+  // --- Mobile: touch-based element selection (replaces hover on touch devices) ---
+  const handleTouchSelect = useCallback(async (e) => {
+    if (!isActive || isCanvasActive || isModalOpen) return;
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!isValidElement(element)) return;
+
+    e.preventDefault();
+
+    // Highlight the element
+    const componentInfo = getReactComponentInfo(element);
+    const rect = element.getBoundingClientRect();
+    const scrollX = window.pageXOffset;
+    const scrollY = window.pageYOffset;
+
+    dispatch({
+      type: 'START_HOVERING',
+      payload: {
+        element,
+        componentInfo,
+        highlightStyle: {
+          left: rect.left + scrollX,
+          top: rect.top + scrollY,
+          width: rect.width,
+          height: rect.height,
+        },
+        tooltipStyle: { left: -9999, top: -9999 } // hide tooltip on mobile
+      }
+    });
+
+    // Capture click position
+    const relativeX = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+    const relativeY = Math.max(0, Math.min(1, (touch.clientY - rect.top) / rect.height));
+    dispatch({ type: 'SET_CLICK_POSITION', payload: { relativeX, relativeY } });
+
+    // Brief highlight then capture
+    dispatch({ type: 'START_CAPTURE', payload: element });
+
+    try {
+      const screenshotData = await captureElementScreenshot(element);
+      dispatch({ type: 'COMPLETE_CAPTURE', payload: screenshotData });
+    } catch (error) {
+      showError('Failed to capture screenshot.', 'Capture Error');
+      dispatch({ type: 'COMPLETE_CAPTURE', payload: null });
+    }
+  }, [isActive, isCanvasActive, isModalOpen, isValidElement]);
+
+  useEffect(() => {
+    if (!isTouchDevice || !isActive || isCanvasActive || isModalOpen) return;
+
+    document.addEventListener('touchstart', handleTouchSelect, { passive: false });
+    return () => document.removeEventListener('touchstart', handleTouchSelect);
+  }, [isTouchDevice, isActive, isCanvasActive, isModalOpen, handleTouchSelect]);
+
+  // --- Mobile: shake detection ---
+  useEffect(() => {
+    if (!enableShake || !isTouchDevice) return;
+
+    const SHAKE_THRESHOLD = 15;
+    const SHAKE_COOLDOWN = 2000;
+    let lastShakeTime = 0;
+    let lastX = null, lastY = null, lastZ = null;
+
+    const handleMotion = (e) => {
+      const { x, y, z } = e.accelerationIncludingGravity || {};
+      if (x == null || y == null || z == null) return;
+
+      if (lastX !== null) {
+        const delta = Math.abs(x - lastX) + Math.abs(y - lastY) + Math.abs(z - lastZ);
+        const now = Date.now();
+
+        if (delta > SHAKE_THRESHOLD && now - lastShakeTime > SHAKE_COOLDOWN) {
+          lastShakeTime = now;
+          if (!isActive && !isRecording && !isModalOpen) {
+            setIsActive(true);
+            dispatch({ type: 'SET_STATE', payload: { isCanvasActive: false } });
+          }
+        }
+      }
+
+      lastX = x; lastY = y; lastZ = z;
+    };
+
+    window.addEventListener('devicemotion', handleMotion);
+    return () => window.removeEventListener('devicemotion', handleMotion);
+  }, [enableShake, isTouchDevice, isActive, isRecording, isModalOpen, setIsActive]);
+
+  // --- Screenshot mode (for mobile screenshot button) ---
+  const openScreenshotMode = useCallback(() => {
+    if (!isActive && !isRecording) {
+      setIsActive(true);
+      dispatch({ type: 'SET_STATE', payload: { isCanvasActive: true } });
+    }
+  }, [isActive, isRecording, setIsActive]);
+
   // Generate unique ID for submissions
   const generateSubmissionId = useCallback(() => {
     return `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -743,7 +848,8 @@ export const FeedbackProvider = ({
       integrations,
       integrationClient: integrationClientRef.current,
       showFeedbackDots,
-      toggleFeedbackDots: () => dispatch({ type: 'TOGGLE_FEEDBACK_DOTS' })
+      toggleFeedbackDots: () => dispatch({ type: 'TOGGLE_FEEDBACK_DOTS' }),
+      openScreenshotMode
     }}>
       <ThemeProvider theme={theme}>
         <FeedbackGlobalStyle />
@@ -844,6 +950,10 @@ export const FeedbackProvider = ({
           data={feedbackDotsData}
           visible={showFeedbackDots && !isActive}
         />
+
+        {enableMobileScreenshot && isTouchDevice && (
+          <MobileTrigger mode={mode} onScreenshot={openScreenshotMode} isActive={isActive} />
+        )}
       </ThemeProvider>
     </FeedbackContext.Provider>
   );
