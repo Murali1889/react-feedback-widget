@@ -73,6 +73,43 @@ const Tooltip = styled.div`
   max-width: 300px;
 `;
 
+const MobileBanner = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: ${props => props.theme.colors.btnPrimaryBg};
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-align: center;
+  z-index: 1000001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  -webkit-tap-highlight-color: transparent;
+`;
+
+const MobileBannerClose = styled.button`
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.3);
+  }
+`;
+
 const TooltipComponent = styled.span`
   color: #10b981;
   font-weight: 600;
@@ -243,7 +280,7 @@ export const FeedbackProvider = ({
   feedbackDotsData,
   // Mobile
   enableShake = true,
-  enableMobileScreenshot = true
+  enableMobileScreenshot = false
 }) => {
   const [state, dispatch] = useReducer(feedbackReducer, initialState);
   const {
@@ -858,6 +895,18 @@ export const FeedbackProvider = ({
         {isActive && !isCanvasActive && !isModalOpen && createPortal(
           <>
             <Overlay ref={overlayRef} />
+
+            {isTouchDevice && (
+              <MobileBanner>
+                Tap any element to report feedback
+                <MobileBannerClose onClick={() => {
+                  setIsActive(false);
+                  dispatch({ type: 'RESET_MODAL' });
+                }}>
+                  Cancel
+                </MobileBannerClose>
+              </MobileBanner>
+            )}
 
             {hoveredElement && (
               <>
