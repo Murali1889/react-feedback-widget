@@ -13,6 +13,16 @@ import {
   feedbackToSheetRow,
   getSheetHeaders
 } from './config.js';
+import { isInsecureWebhookMode } from '../lib/feedbackSecurity.js';
+
+const _warnedInsecureModes = new Set();
+function maybeWarnInsecure(modeKey) {
+  if (!modeKey || _warnedInsecureModes.has(modeKey)) return;
+  _warnedInsecureModes.add(modeKey);
+  console.warn(
+    `[react-visual-feedback] Using insecure webhook mode "${modeKey}" — provider URL is shipped to the browser and acts as a secret. Switch to a server-mediated endpoint. See docs/production-security-checklist.md`
+  );
+}
 
 // ============================================
 // INTEGRATION CLIENT
@@ -24,6 +34,17 @@ export class IntegrationClient {
     this.sheetsConfig = config.sheets || null;
     this.onError = config.onError || (() => {});
     this.onSuccess = config.onSuccess || (() => {});
+    this.getAuthHeaders = typeof config.getAuthHeaders === 'function' ? config.getAuthHeaders : null;
+  }
+
+  async _resolveAuthHeaders() {
+    if (!this.getAuthHeaders) return {};
+    try {
+      const h = await this.getAuthHeaders();
+      return h && typeof h === 'object' ? h : {};
+    } catch {
+      return {};
+    }
   }
 
   /**
@@ -78,6 +99,10 @@ export class IntegrationClient {
     }
 
     const type = config.type || INTEGRATION_TYPES.JIRA.SERVER;
+
+    if (isInsecureWebhookMode(type)) {
+      maybeWarnInsecure(`jira:${type}`);
+    }
 
     switch (type) {
       case INTEGRATION_TYPES.JIRA.SERVER:
@@ -144,10 +169,12 @@ export class IntegrationClient {
       formData.append('eventLogs', logsBlob, 'session-logs.json');
     }
 
+    const authHeaders = await this._resolveAuthHeaders();
     const response = await fetch(endpoint, {
       method: 'POST',
-      body: formData
-      // Note: Don't set Content-Type header - browser will set it with boundary
+      body: formData,
+      // Note: Don't set Content-Type for multipart — the browser sets it with boundary.
+      headers: { ...authHeaders },
     });
 
     if (!response.ok) {
@@ -221,6 +248,10 @@ export class IntegrationClient {
 
     const type = config.type || INTEGRATION_TYPES.SHEETS.SERVER;
 
+    if (isInsecureWebhookMode(type)) {
+      maybeWarnInsecure(`sheets:${type}`);
+    }
+
     switch (type) {
       case INTEGRATION_TYPES.SHEETS.SERVER:
       case INTEGRATION_TYPES.SHEETS.OAUTH:
@@ -243,9 +274,10 @@ export class IntegrationClient {
   async sendToSheetsServer(feedbackData, config) {
     const endpoint = config.endpoint || '/api/feedback/sheets';
 
+    const authHeaders = await this._resolveAuthHeaders();
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({
         action: 'append',
         feedbackData
@@ -342,9 +374,10 @@ export class IntegrationClient {
 
     const endpoint = this.jiraConfig.endpoint || '/api/feedback/jira';
 
+    const authHeaders = await this._resolveAuthHeaders();
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({
         action: 'updateStatus',
         issueKey,
@@ -384,9 +417,10 @@ export class IntegrationClient {
 
     const endpoint = this.sheetsConfig.endpoint || '/api/feedback/sheets';
 
+    const authHeaders = await this._resolveAuthHeaders();
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({
         action: 'updateStatus',
         feedbackId,
@@ -407,9 +441,10 @@ export class IntegrationClient {
 
     const endpoint = this.jiraConfig.endpoint || '/api/feedback/jira';
 
+    const authHeaders = await this._resolveAuthHeaders();
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({
         action: 'getStatus',
         issueKey
@@ -419,6 +454,9 @@ export class IntegrationClient {
     return response.json();
   }
 }
+
+// Expose for test cleanup
+IntegrationClient._warnedModes = _warnedInsecureModes;
 
 // ============================================
 // REACT HOOK
