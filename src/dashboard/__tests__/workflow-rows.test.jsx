@@ -77,7 +77,7 @@ describe('HandoffRow', () => {
     const writeText = vi.fn().mockResolvedValue();
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     render(<HandoffRow item={baseItem} />);
-    fireEvent.click(screen.getByRole('button', { name: /copy as/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /copy as/i })[0]);
     fireEvent.click(screen.getByText(/short/i));
     expect(writeText).toHaveBeenCalled();
   });
