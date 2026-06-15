@@ -1,6 +1,7 @@
 // No CSS import needed - using styled-components
 
 export { FeedbackProvider, useFeedback } from './FeedbackProvider';
+export { SimpleFeedbackButton } from './SimpleFeedbackButton';
 export { FeedbackModal } from './FeedbackModal';
 export { FeedbackDashboard, saveFeedbackToLocalStorage, DEFAULT_STATUSES } from './FeedbackDashboard';
 export { FeedbackCommandCenter } from './dashboard/FeedbackCommandCenter.jsx';
