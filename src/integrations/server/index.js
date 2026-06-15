@@ -1,26 +1,45 @@
 /**
  * React Visual Feedback - Server Integrations
  *
- * This module provides server-side handlers for Jira and Google Sheets integrations.
  * Import from 'react-visual-feedback/server' in your API routes.
  *
- * Quick Start:
+ * Recommended setup (Next.js App Router):
+ *   import { withSecureDefaults, createJiraHandler, FeedbackAuthError }
+ *     from 'react-visual-feedback/server';
+ *   import { getServerSession } from '@/lib/auth';
  *
- * Next.js App Router:
- *   // app/api/feedback/jira/route.js
- *   import { createJiraHandler } from 'react-visual-feedback/server';
- *   const handler = createJiraHandler({ projectKey: 'BUG' });
- *   export const POST = (req) => handler({ body: await req.json() });
+ *   export const POST = withSecureDefaults({
+ *     authorize: async (req) => {
+ *       const session = await getServerSession(req);
+ *       if (!session) throw new FeedbackAuthError();
+ *       return { userId: session.userId, projectId: session.projectId };
+ *     },
+ *   })(createJiraHandler({ projectKey: 'BUG' }));
  *
- * Next.js Pages Router:
- *   // pages/api/feedback/jira.js
- *   import { createJiraHandler } from 'react-visual-feedback/server';
- *   export default createJiraHandler({ projectKey: 'BUG' });
- *
- * Express:
- *   import { createJiraMiddleware } from 'react-visual-feedback/server';
- *   app.post('/api/feedback/jira', createJiraMiddleware({ projectKey: 'BUG' }));
+ * See docs/production-security-checklist.md for the full setup guide.
  */
+
+// ============================================
+// SECURITY WRAPPER + HELPERS
+// ============================================
+
+export { withSecureDefaults } from './withSecureDefaults.js';
+export {
+  defaultOriginValidator,
+  defaultRateLimiter,
+  defaultErrorNormalizer,
+} from './defaults.js';
+export { toRequestLike } from './request.js';
+export { csrfRequired, checkCsrf } from './csrf.js';
+
+// Error classes hosts throw inside `authorize`
+export {
+  FeedbackAuthError,
+  FeedbackForbiddenError,
+  FeedbackValidationError,
+  FeedbackRateLimitError,
+  FeedbackPayloadTooLargeError,
+} from '../../lib/feedbackErrors.js';
 
 // ============================================
 // JIRA EXPORTS

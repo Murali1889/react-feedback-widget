@@ -4,6 +4,39 @@
 
 A powerful, visual feedback collection tool for React applications with screen recording, session replay, and an integrated dashboard for managing user feedback.
 
+## Secure setup in 10 lines (v2.3+)
+
+```jsx
+// Client (e.g. app/layout.jsx)
+<FeedbackProvider
+  endpoint="/api/feedback/jira"
+  auth={{ mode: 'session' }}   // same-site cookie + auto CSRF
+  redact="default"             // bodies dropped; sensitive headers/keys redacted
+/>
+```
+
+```js
+// Server (Next.js App Router: app/api/feedback/jira/route.js)
+import {
+  withSecureDefaults,
+  createJiraHandler,
+  FeedbackAuthError,
+} from 'react-visual-feedback/server';
+import { getServerSession } from '@/lib/auth';
+
+export const POST = withSecureDefaults({
+  authorize: async (req) => {
+    const session = await getServerSession(req);
+    if (!session) throw new FeedbackAuthError();
+    return { userId: session.userId, projectId: session.projectId };
+  },
+})(createJiraHandler({ projectKey: 'BUG' }));
+```
+
+This is the **safe** path. `withSecureDefaults` enforces origin allowlist, CSRF check, rate limit, your `authorize` callback, validation, redaction of sensitive headers/keys, and opaque error normalization — all in a fixed order with sane defaults. Read the **[Production Security Checklist](docs/production-security-checklist.md)** before deploying.
+
+Examples: [Next.js (secure session + anonymous capture)](example-nextjs/), [minimal Express](example-express/).
+
 ## Features
 
 ### Feedback Collection

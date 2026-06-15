@@ -1,16 +1,23 @@
 {
   "name": "react-visual-feedback",
-  "version": "2.2.14",
+  "version": "2.3.0",
   "description": "A visual feedback widget for React applications with element selection, screenshot capture, professional dashboard, and Jira/Google Sheets integrations",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/types.d.ts",
       "import": "./dist/index.esm.js",
       "require": "./dist/index.js"
     },
+    "./lib": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/lib/index.esm.js",
+      "require": "./dist/lib/index.js"
+    },
     "./server": {
+      "types": "./dist/types.d.ts",
       "import": "./dist/server/index.js",
       "require": "./dist/server/index.js"
     },
@@ -31,7 +38,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm test && npm run build"
   },
   "keywords": [
     "react",
@@ -81,6 +92,7 @@
     "react-dom": "^18.2.0",
     "rollup": "^4.9.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
-    "styled-components": "^6.1.19"
+    "styled-components": "^6.1.19",
+    "vitest": "^1.6.1"
   }
 }

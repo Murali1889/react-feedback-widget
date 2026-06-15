@@ -1,13 +1,23 @@
 /**
- * Google Sheets Integration API Route
- *
- * Just import and use the handler from the library!
- *
- * Environment variables needed:
- * - GOOGLE_SERVICE_ACCOUNT: JSON string of service account credentials
- * - GOOGLE_SPREADSHEET_ID: ID from the spreadsheet URL
+ * Sheets Integration API Route — secure variant.
+ * See ./jira/route.ts for what withSecureDefaults enforces.
  */
 
-import { createSheetsNextAppHandler } from 'react-visual-feedback/server'
+import {
+  withSecureDefaults,
+  createSheetsHandler,
+  FeedbackAuthError,
+} from 'react-visual-feedback/server'
+import { getDemoSession } from '@/lib/feedback-auth'
 
-export const POST = createSheetsNextAppHandler()
+export const POST = withSecureDefaults({
+  authorize: async (req: any) => {
+    const session = await getDemoSession(req)
+    if (!session) throw new FeedbackAuthError()
+    return {
+      userId: session.userId,
+      projectId: session.projectId,
+      role: session.role,
+    }
+  },
+})(createSheetsHandler())

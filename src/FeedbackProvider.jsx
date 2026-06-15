@@ -19,6 +19,11 @@ import recorder from './recorder.js';
 import { getElementInfo, captureElementScreenshot, getReactComponentInfo } from './utils.js';
 import { getTheme, FeedbackGlobalStyle } from './theme.js';
 import { IntegrationClient } from './integrations/index.js';
+import {
+  getFeedbackAuthHeaders,
+  resolveRedactionConfig,
+  redactFeedbackEvidence,
+} from './lib/feedbackSecurity.js';
 import { FeedbackDots } from './FeedbackDots.jsx';
 import { MobileTrigger } from './MobileTrigger.jsx';
 
@@ -279,8 +284,32 @@ export const FeedbackProvider = ({
   showFeedbackDots: showFeedbackDotsProp,
   feedbackDotsData,
   // Mobile
-  enableMobileFeedback = true
+  enableMobileFeedback = true,
+  // Security (Phase A)
+  auth,                  // { mode: 'none'|'session'|'bearer'|'signed', getToken?, getHeaders?, csrfToken? }
+  redact = 'default',    // 'default' | 'strict' | 'off' | FeedbackRedactionConfig
 }) => {
+  // Stable refs for auth/redact so we can read latest values from callbacks.
+  const authRef = useRef(auth);
+  authRef.current = auth;
+  const redactionConfigRef = useRef(resolveRedactionConfig(redact));
+  useEffect(() => {
+    redactionConfigRef.current = resolveRedactionConfig(redact);
+  }, [redact]);
+
+  // Auth-mode 'none' production warning (one-time).
+  useEffect(() => {
+    if (auth && auth.mode === 'none' && typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+      console.warn('[react-visual-feedback] auth.mode === "none" is for demos only — anyone can submit feedback. Use session, bearer, or signed in production.');
+    }
+  }, [auth?.mode]);
+
+  // Stable async function that returns fresh auth headers per call.
+  const getAuthHeadersForSubmission = useRef(async () => {
+    if (!authRef.current) return {};
+    return getFeedbackAuthHeaders(authRef.current);
+  }).current;
+
   const [state, dispatch] = useReducer(feedbackReducer, initialState);
   const {
     internalIsActive,
@@ -316,6 +345,7 @@ export const FeedbackProvider = ({
       integrationClientRef.current = new IntegrationClient({
         jira: integrations.jira,
         sheets: integrations.sheets,
+        getAuthHeaders: getAuthHeadersForSubmission,
         onSuccess: (type, result) => {
           if (onIntegrationSuccess) {
             onIntegrationSuccess(type, result);
@@ -330,7 +360,7 @@ export const FeedbackProvider = ({
     } else {
       integrationClientRef.current = null;
     }
-  }, [integrations?.jira?.enabled, integrations?.sheets?.enabled, onIntegrationSuccess, onIntegrationError]);
+  }, [integrations?.jira?.enabled, integrations?.sheets?.enabled, onIntegrationSuccess, onIntegrationError, getAuthHeadersForSubmission]);
 
   // Determine if component is controlled
   const isControlled = controlledIsActive !== undefined;
@@ -639,9 +669,14 @@ export const FeedbackProvider = ({
     });
 
     const submitPromise = (async () => {
-      let processedData = { ...feedbackData };
+      // Client-side redaction: strip sensitive headers, keys, and bodies from
+      // captured network/console/storage events before localStorage write or
+      // network submission. Server-side withSecureDefaults will redact again
+      // as defense-in-depth.
+      const redacted = redactFeedbackEvidence(feedbackData, redactionConfigRef.current).data;
+      let processedData = { ...redacted };
 
-      // Keep videoBlob as-is for FormData upload
+      // Keep videoBlob as-is for FormData upload (binary; redactor does not touch it).
       if (feedbackData.videoBlob && feedbackData.videoBlob instanceof Blob) {
         processedData.videoBlob = feedbackData.videoBlob;
         processedData.videoSize = feedbackData.videoBlob.size;
@@ -756,16 +791,18 @@ export const FeedbackProvider = ({
       userEmail: userEmail || null
     };
 
+    const redactedCanvas = redactFeedbackEvidence(feedbackData, redactionConfigRef.current).data;
+
     try {
       if (dashboard) {
-        const result = await saveFeedbackToLocalStorage(feedbackData);
+        const result = await saveFeedbackToLocalStorage(redactedCanvas);
         if (!result.success) {
           throw new Error(result.error);
         }
       }
 
       if (onSubmit && typeof onSubmit === 'function') {
-        await onSubmit(feedbackData);
+        await onSubmit(redactedCanvas);
       }
 
       showSuccess('Feedback submitted successfully!', 'Success');

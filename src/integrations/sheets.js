@@ -399,11 +399,36 @@ class SheetsOAuthClient extends SheetsClient {
 // REQUEST HANDLERS
 // ============================================
 
+let _sheetsInsecureWarned = false;
+function warnIfInsecure(config) {
+  if (config.security || config.__suppressInsecureWarning || _sheetsInsecureWarned) return;
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    _sheetsInsecureWarned = true;
+    console.warn('[react-visual-feedback] createSheetsHandler() called without withSecureDefaults wrapper in production. Wrap with withSecureDefaults({ authorize }) for origin, CSRF, rate-limit, and authorization checks. See docs/production-security-checklist.md');
+  }
+}
+
 /**
- * Create Sheets handler with configuration
+ * Create Sheets handler with configuration.
+ *
+ * Two call patterns:
+ *   1. Legacy: (req, res) => Response. Parses body itself.
+ *   2. Secure: (feedbackData, { authContext, securityContext }) — invoked by
+ *      withSecureDefaults with already-parsed, validated, redacted data.
  */
 export function createSheetsHandler(config = {}) {
+  warnIfInsecure(config);
+
   const handler = async (req, res) => {
+    // Secure path: invoked by withSecureDefaults with parsed feedbackData + ctx.
+    if (res && typeof res === 'object' && res.authContext) {
+      const feedbackData = req;
+      const ClientClass = config.oauth ? SheetsOAuthClient : SheetsClient;
+      const client = new ClientClass(config);
+      const result = await handleAppend(client, feedbackData, config);
+      return { data: result };
+    }
+
     try {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       const { action = 'append', feedbackData, feedbackId, status, row } = body;
