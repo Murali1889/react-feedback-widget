@@ -568,6 +568,34 @@ async function handleCreate(client, feedbackData, config) {
     }
   }
 
+  // AI ticket attachment (Phase C)
+  if (feedbackData.aiTicket && config.uploadAttachments !== false) {
+    try {
+      const md = Buffer.from(String(feedbackData.aiTicket.markdown || ''), 'utf-8');
+      if (md.length > 0) {
+        const result = await client.addAttachment(
+          issueKey,
+          `feedback-ai-${feedbackData.id || Date.now()}.md`,
+          md,
+          'text/markdown',
+        );
+        attachments.push({ type: 'aiMarkdown', ...result[0] });
+      }
+      const jsonBuf = Buffer.from(JSON.stringify(feedbackData.aiTicket.json || {}, null, 2), 'utf-8');
+      if (jsonBuf.length > 0) {
+        const result2 = await client.addAttachment(
+          issueKey,
+          `feedback-ai-${feedbackData.id || Date.now()}.json`,
+          jsonBuf,
+          'application/json',
+        );
+        attachments.push({ type: 'aiJson', ...result2[0] });
+      }
+    } catch (err) {
+      attachments.push({ type: 'aiTicket', error: err.message });
+    }
+  }
+
   // Include debug info
   const debugInfo = {
     videoBufferReceived: !!feedbackData.videoBuffer,
