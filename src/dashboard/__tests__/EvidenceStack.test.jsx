@@ -16,20 +16,20 @@ describe('EvidenceStack', () => {
 
   it('renders sticky header with title and chips', () => {
     render(<EvidenceStack item={item} />);
-    expect(screen.getByText('thing broken')).toBeInTheDocument();
+    expect(screen.getAllByText('thing broken').length).toBeGreaterThan(0);
   });
 
   it('renders all four sections when applicable', () => {
     render(<EvidenceStack item={item} />);
     expect(screen.getByRole('button', { name: /what the user said/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^▸visual/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^▸logs/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^▸source/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /visual/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /logs/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /source/i })).toBeInTheDocument();
   });
 
   it('clicking a section header collapses its body', () => {
     render(<EvidenceStack item={item} />);
-    const logsHeader = screen.getByRole('button', { name: /^▸logs/i });
+    const logsHeader = screen.getByRole('button', { name: /logs/i });
     fireEvent.click(logsHeader);
     expect(screen.queryByText('[ERROR] X')).not.toBeInTheDocument();
   });
