@@ -92,13 +92,32 @@ function redactHeaders(headers, cfg) {
   return out;
 }
 
+/**
+ * Normalize a key name for sensitive-key matching: lowercase + strip
+ * underscores/dashes/dots so 'access_token', 'AccessToken', 'access-token',
+ * 'access.token', and 'ACCESSTOKEN' all collapse to the same form.
+ */
+function normalizeKeyName(k) {
+  return String(k || '').toLowerCase().replace(/[_\-.]/g, '');
+}
+
+function keyMatches(candidate, sensitiveKeys) {
+  const n = normalizeKeyName(candidate);
+  return sensitiveKeys.some((s) => normalizeKeyName(s) === n);
+}
+
 function redactObjectByKeys(value, sensitiveKeys, depth = 0) {
   if (depth > 12) return value;
   if (Array.isArray(value)) return value.map((v) => redactObjectByKeys(v, sensitiveKeys, depth + 1));
   if (value && typeof value === 'object') {
     const out = {};
-    for (const [k, v] of Object.entries(value)) {
-      if (sensitiveKeys.some((s) => s.toLowerCase() === k.toLowerCase())) {
+    // Iterate own enumerable string keys only — skip __proto__, constructor,
+    // and other Object.prototype properties to avoid prototype pollution
+    // via crafted JSON bodies.
+    for (const k of Object.keys(value)) {
+      if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;
+      const v = value[k];
+      if (keyMatches(k, sensitiveKeys)) {
         out[k] = '<redacted>';
       } else {
         out[k] = redactObjectByKeys(v, sensitiveKeys, depth + 1);
@@ -120,10 +139,19 @@ function redactBodyString(body, cfg) {
 }
 
 const INLINE_SECRET_RE = /((?:password|token|secret|api[-_]?key|authorization)\s*[:=]\s*)("?[^"\s,;]+"?)/gi;
+// Header form like `Authorization: Bearer <token>` — consume up to the closing
+// quote / newline / comma so the scheme + token are both redacted, not just
+// the first word after the colon.
+const HEADER_AUTH_RE = /((?:authorization)\s*[:=]\s*)"?[^"\r\n,;]+"?/gi;
+// Standalone `Bearer abc.def` / `Basic xyz` outside a header label.
+const BEARER_SCHEME_RE = /\b(Bearer|Basic|Digest)\s+([A-Za-z0-9+/=._~\-]+)/g;
 
 function redactInlineSecrets(text /*, cfg */) {
   if (typeof text !== 'string') return text;
-  return text.replace(INLINE_SECRET_RE, (_m, prefix) => `${prefix}<redacted>`);
+  return text
+    .replace(HEADER_AUTH_RE, (_m, prefix) => `${prefix}<redacted>`)
+    .replace(INLINE_SECRET_RE, (_m, prefix) => `${prefix}<redacted>`)
+    .replace(BEARER_SCHEME_RE, (_m, scheme) => `${scheme} <redacted>`);
 }
 
 function redactUrl(url, cfg) {
@@ -137,7 +165,7 @@ function redactUrl(url, cfg) {
     if (u.searchParams) {
       const replacements = [];
       for (const [k] of u.searchParams) {
-        if (cfg.redactQueryParams.some((p) => p.toLowerCase() === k.toLowerCase())) {
+        if (keyMatches(k, cfg.redactQueryParams)) {
           replacements.push(k);
         }
       }
@@ -207,7 +235,7 @@ export function redactStorageEvent(event, cfg) {
     if (typeof out.value === 'string') {
       if (cfg.dropStorageValues) {
         out.value = '<dropped: storage value>';
-      } else if (cfg.redactBodyKeys.some((k) => k.toLowerCase() === String(out.key || '').toLowerCase())) {
+      } else if (keyMatches(out.key, cfg.redactBodyKeys)) {
         out.value = '<redacted>';
       } else if (out.value.length > 200) {
         out.value = out.value.slice(0, 200) + '...<truncated>';
