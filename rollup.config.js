@@ -3,6 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import babel from '@rollup/plugin-babel';
 import peerDepsExternal from 'rollup-plugin-peer-deps-external';
 import terser from '@rollup/plugin-terser';
+import fs from 'node:fs';
 
 const onwarn = (warning, warn) => {
   // Suppress circular dependency warnings from node_modules
@@ -120,5 +121,24 @@ export default [
     },
     onwarn,
     plugins: serverPlugins,
+  },
+  // Pure helpers (isomorphic lib)
+  {
+    input: 'src/lib/index.js',
+    output: [
+      { file: 'dist/lib/index.js', format: 'cjs', sourcemap: true },
+      { file: 'dist/lib/index.esm.js', format: 'esm', sourcemap: true },
+    ],
+    onwarn,
+    plugins: [
+      ...serverPlugins,
+      {
+        name: 'copy-types',
+        writeBundle() {
+          fs.mkdirSync('dist', { recursive: true });
+          fs.copyFileSync('src/types.d.ts', 'dist/types.d.ts');
+        },
+      },
+    ],
   },
 ];
