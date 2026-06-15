@@ -4,9 +4,14 @@ import path from 'node:path';
 import { gzipSizeSync } from 'gzip-size';
 
 const BUDGETS = {
-  'dist/index.esm.js': { maxGzipKB: 100, note: 'main bundle' },
+  // Main bundle accumulates Phase A security + B1 primitives + B2 dashboard +
+  // C capture context wiring. Hosts that care about size import the per-feature
+  // subpath bundles below directly.
+  'dist/index.esm.js': { maxGzipKB: 140, note: 'main bundle (all phases)' },
   'dist/capture/index.esm.js': { maxGzipKB: 12, note: 'capture client (main thread)' },
   'dist/capture/worker.js': { maxGzipKB: 35, note: 'capture worker (lazy chunk)' },
+  'dist/dashboard/index.esm.js': { maxGzipKB: 60, note: 'Command Center (lazy)' },
+  'dist/ui/index.esm.js': { maxGzipKB: 25, note: 'UI primitives (lazy)' },
 };
 
 let failures = 0;

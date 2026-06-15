@@ -26,6 +26,15 @@
       "import": "./dist/dashboard/index.esm.js",
       "require": "./dist/dashboard/index.js"
     },
+    "./capture": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/capture/index.esm.js",
+      "require": "./dist/capture/index.js"
+    },
+    "./capture/worker": {
+      "import": "./dist/capture/worker.js",
+      "require": "./dist/capture/worker.js"
+    },
     "./server": {
       "types": "./dist/types.d.ts",
       "import": "./dist/server/index.js",
