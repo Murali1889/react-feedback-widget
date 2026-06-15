@@ -10,6 +10,18 @@ import React, {
 import { createPortal } from 'react-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import { FeedbackModal } from './FeedbackModal.jsx';
+import { FeedbackModalDrawer } from './feedback-modal/FeedbackModalDrawer.jsx';
+import { FeedbackModalCompact } from './feedback-modal/FeedbackModalCompact.jsx';
+import { FeedbackModalStepper } from './feedback-modal/FeedbackModalStepper.jsx';
+import { FeedbackModalTwoColumn } from './feedback-modal/FeedbackModalTwoColumn.jsx';
+
+const MODAL_VARIANTS = {
+  centered: FeedbackModal,
+  drawer: FeedbackModalDrawer,
+  compact: FeedbackModalCompact,
+  stepper: FeedbackModalStepper,
+  'two-column': FeedbackModalTwoColumn,
+};
 import { FeedbackDashboard, saveFeedbackToLocalStorage } from './FeedbackDashboard.jsx';
 import { CanvasOverlay } from './CanvasOverlay.jsx';
 import { RecordingOverlay } from './RecordingOverlay.jsx';
@@ -292,6 +304,8 @@ export const FeedbackProvider = ({
   // Security (Phase A)
   auth,                  // { mode: 'none'|'session'|'bearer'|'signed', getToken?, getHeaders?, csrfToken? }
   redact = 'default',    // 'default' | 'strict' | 'off' | FeedbackRedactionConfig
+  // Phase D: pick which dialog layout to render. 'centered' = original; 'drawer' | 'compact' | 'stepper' | 'two-column' are alternative structures.
+  modalVariant = 'centered',
 }) => {
   // Stable refs for auth/redact so we can read latest values from callbacks.
   const authRef = useRef(auth);
@@ -967,23 +981,28 @@ export const FeedbackProvider = ({
           document.body
         )}
 
-        <FeedbackModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          elementInfo={selectedElement ? getElementInfo(selectedElement) : null}
-          screenshot={screenshot}
-          videoBlob={videoBlob}
-          eventLogs={eventLogs}
-          onSubmit={handleFeedbackSubmit}
-          onAsyncSubmit={handleAsyncSubmit}
-          userName={userName}
-          userEmail={userEmail}
-          userAvatar={userAvatar}
-          mode={mode}
-          isManual={isManualFeedbackOpen}
-          integrations={integrations}
-          clickPosition={clickPosition}
-        />
+        {(() => {
+          const ModalComponent = MODAL_VARIANTS[modalVariant] || FeedbackModal;
+          return (
+            <ModalComponent
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              elementInfo={selectedElement ? getElementInfo(selectedElement) : null}
+              screenshot={screenshot}
+              videoBlob={videoBlob}
+              eventLogs={eventLogs}
+              onSubmit={handleFeedbackSubmit}
+              onAsyncSubmit={handleAsyncSubmit}
+              userName={userName}
+              userEmail={userEmail}
+              userAvatar={userAvatar}
+              mode={mode}
+              isManual={isManualFeedbackOpen}
+              integrations={integrations}
+              clickPosition={clickPosition}
+            />
+          );
+        })()}
 
         <CanvasOverlay
           isActive={isCanvasActive}

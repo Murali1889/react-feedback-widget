@@ -13,8 +13,11 @@ interface FeedbackProviderWrapperProps {
   children: ReactNode
 }
 
+type ModalVariant = 'centered' | 'drawer' | 'compact' | 'stepper' | 'two-column'
+
 export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperProps) {
   const [integrationType, setIntegrationType] = useState<'server' | 'apps-script' | 'zapier'>('server')
+  const [modalVariant, setModalVariant] = useState<ModalVariant>('centered')
 
   const handleFeedbackSubmit = async (feedbackData: any) => {
     console.log('Feedback submitted:', feedbackData)
@@ -82,34 +85,62 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
 
   return (
     <>
-      {/* Integration Type Selector - for testing */}
+      {/* Dev controls: integration type + modal variant picker */}
       <div style={{
         position: 'fixed',
         top: 10,
         left: 10,
         zIndex: 9999,
         background: 'white',
-        padding: '12px 16px',
+        padding: '14px 16px',
         borderRadius: 12,
         boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-        fontSize: 13
+        fontSize: 13,
+        display: 'grid',
+        gap: 10,
+        minWidth: 240,
       }}>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>Integration Type:</div>
-        <select
-          value={integrationType}
-          onChange={(e) => setIntegrationType(e.target.value as any)}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 6,
-            border: '1px solid #ddd',
-            fontSize: 13,
-            cursor: 'pointer'
-          }}
-        >
-          <option value="server">Server (Jira + Sheets API)</option>
-          <option value="apps-script">Google Apps Script</option>
-          <option value="zapier">Zapier Webhooks</option>
-        </select>
+        <div>
+          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>Modal layout</div>
+          <select
+            value={modalVariant}
+            onChange={(e) => setModalVariant(e.target.value as ModalVariant)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid #ddd',
+              fontSize: 13,
+              cursor: 'pointer',
+              width: '100%',
+            }}
+          >
+            <option value="centered">Centered modal (default)</option>
+            <option value="drawer">Drawer (slide from right)</option>
+            <option value="compact">Compact card (bottom-right)</option>
+            <option value="stepper">Stepper wizard (3 steps)</option>
+            <option value="two-column">Two-column (form + evidence)</option>
+          </select>
+        </div>
+
+        <div>
+          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>Integration</div>
+          <select
+            value={integrationType}
+            onChange={(e) => setIntegrationType(e.target.value as any)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid #ddd',
+              fontSize: 13,
+              cursor: 'pointer',
+              width: '100%',
+            }}
+          >
+            <option value="server">Server (Jira + Sheets API)</option>
+            <option value="apps-script">Google Apps Script</option>
+            <option value="zapier">Zapier Webhooks</option>
+          </select>
+        </div>
       </div>
 
       <FeedbackProvider
@@ -141,6 +172,7 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
             'demo-mode': true,
           }),
         }}
+        modalVariant={modalVariant}
       >
         {children}
       </FeedbackProvider>
