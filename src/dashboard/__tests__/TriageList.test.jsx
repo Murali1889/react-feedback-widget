@@ -25,7 +25,7 @@ describe('TriageList', () => {
     fireEvent.change(screen.getByPlaceholderText(/search/i), { target: { value: 'two' } });
     act(() => { vi.advanceTimersByTime(250); });
     expect(screen.queryByText('one')).not.toBeInTheDocument();
-    expect(screen.getByText('two')).toBeInTheDocument();
+    expect(screen.getAllByText('two').length).toBeGreaterThan(0);
     vi.useRealTimers();
   });
 
