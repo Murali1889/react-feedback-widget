@@ -127,6 +127,20 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
         // plus automatic CSRF discovery. Server enforces every request.
         auth={{ mode: 'session' }}
         redact="default"
+        // Phase C: AI-actionable capture. Every submission gets enriched with
+        // file/line/code-snippet/state/repro/flags. Inspect via the Workflow
+        // Panel's "Copy as → AI ticket (Markdown)" action.
+        captureConfig={{
+          buildInfo: {
+            commit: 'demo-commit-abc123',
+            branch: 'main',
+            environment: 'development',
+          },
+          flagsSnapshot: () => ({
+            'checkout-redesign': 'variant-b',
+            'demo-mode': true,
+          }),
+        }}
       >
         {children}
       </FeedbackProvider>
