@@ -1,200 +1,132 @@
 import styled, { keyframes, createGlobalStyle } from 'styled-components';
+import { tokens } from './ui/tokens.js';
 
-// Theme definitions
-export const lightTheme = {
-  mode: 'light',
-  colors: {
-    overlayBg: 'rgba(0, 0, 0, 0.03)',
-    backdropBg: 'rgba(0, 0, 0, 0.6)',
-    modalBg: '#ffffff',
-    modalBorder: '#e5e7eb',
-    textPrimary: '#111827',
-    textSecondary: '#6b7280',
-    textTertiary: '#9ca3af',
-    border: '#d1d5db',
-    borderFocus: '#3b82f6',
-    inputBg: '#ffffff',
-    inputDisabledBg: '#f9fafb',
-    btnCancelBg: '#f3f4f6',
-    btnCancelHover: '#e5e7eb',
-    btnCancelText: '#374151',
-    btnPrimaryBg: '#3b82f6',
-    btnPrimaryHover: '#2563eb',
+/**
+ * Map the new semantic tokens onto the long-standing legacy color
+ * names so existing styled-components keep working without any
+ * change. New code should reach for theme.tokens.color.* directly
+ * via the UIThemeProvider (see src/ui/ThemeContext.jsx).
+ */
+function mapToLegacy(t) {
+  return {
+    // Surfaces and backgrounds
+    overlayBg: t.mode === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.03)',
+    backdropBg: t.mode === 'dark' ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.6)',
+    modalBg: t.color.surface,
+    modalBorder: t.color.border,
+    cardBg: t.color.surface,
+    headerBg: t.color.canvas,
+    contentBg: t.color.canvas,
+    hoverBg: t.color.canvas,
+    closeHoverBg: t.color.canvas,
+    screenshotBg: t.color.canvas,
+    screenshotBorder: t.color.border,
+
+    // Text
+    textPrimary: t.color.text,
+    textSecondary: t.color.textMuted,
+    textTertiary: t.color.textFaint,
+
+    // Borders + focus
+    border: t.color.borderStrong,
+    borderFocus: t.color.accent,
+
+    // Inputs
+    inputBg: t.color.surface,
+    inputDisabledBg: t.color.canvas,
+
+    // Buttons
+    btnCancelBg: t.color.canvas,
+    btnCancelHover: t.color.border,
+    btnCancelText: t.color.text,
+    btnPrimaryBg: t.color.accent,
+    btnPrimaryHover: t.color.accentHover,
     btnPrimaryText: '#ffffff',
-    btnDisabledBg: '#9ca3af',
-    highlightBorder: '#3b82f6',
-    highlightBg: 'rgba(59, 130, 246, 0.1)',
-    highlightShadow: 'rgba(59, 130, 246, 0.25)',
-    tooltipBg: '#1f2937',
-    tooltipText: '#ffffff',
-    errorBg: '#fef2f2',
-    errorBorder: '#fca5a5',
-    errorText: '#dc2626',
-    screenshotBorder: '#e5e7eb',
-    screenshotBg: '#f9fafb',
-    shadow: 'rgba(0, 0, 0, 0.1)',
-    closeHoverBg: '#f3f4f6',
-    hoverBg: '#f3f4f6',
-    cardBg: '#ffffff',
-    headerBg: '#f9fafb',
-    contentBg: '#f9fafb',
-    // Feedback dots
-    dotBorder: '#ffffff',
-    dotPopoverBg: '#ffffff',
-    dotPopoverBorder: '#e5e7eb',
-    dotPopoverShadow: 'rgba(0, 0, 0, 0.15)',
-    dotMiniCardBg: '#ffffff',
-    dotMiniCardBorder: '#e5e7eb',
-    dotMiniCardShadow: 'rgba(0, 0, 0, 0.12)',
-    dotToolbarBg: '#ffffff',
-    dotToolbarBorder: '#e5e7eb',
-    dotToolbarShadow: 'rgba(0, 0, 0, 0.12)',
-    dotClusterBg: '#3b82f6',
-    dotClusterText: '#ffffff',
-    dotFocusRing: '#3b82f6',
-  }
-};
+    btnDisabledBg: t.color.borderStrong,
 
-export const darkTheme = {
-  mode: 'dark',
-  colors: {
-    overlayBg: 'rgba(0, 0, 0, 0.5)',
-    backdropBg: 'rgba(0, 0, 0, 0.85)',
-    modalBg: '#0f172a', // Darker slate
-    modalBorder: '#1e293b',
-    textPrimary: '#f8fafc',
-    textSecondary: '#cbd5e1', // Lighter gray for better readability
-    textTertiary: '#94a3b8',
-    border: '#334155',
-    borderFocus: '#60a5fa',
-    inputBg: '#020617', // Very dark for inputs
-    inputDisabledBg: '#1e293b',
-    btnCancelBg: '#1e293b',
-    btnCancelHover: '#334155',
-    btnCancelText: '#e2e8f0',
-    btnPrimaryBg: '#3b82f6',
-    btnPrimaryHover: '#2563eb',
-    btnPrimaryText: '#ffffff',
-    btnDisabledBg: '#475569',
-    highlightBorder: '#60a5fa',
-    highlightBg: 'rgba(96, 165, 250, 0.2)',
-    highlightShadow: 'rgba(96, 165, 250, 0.4)',
-    tooltipBg: '#1e293b',
-    tooltipText: '#f8fafc',
-    errorBg: '#450a0a',
-    errorBorder: '#ef4444',
-    errorText: '#fca5a5',
-    screenshotBorder: '#334155',
-    screenshotBg: '#020617',
-    shadow: 'rgba(0, 0, 0, 0.6)',
-    closeHoverBg: '#334155',
-    hoverBg: '#1e293b',
-    cardBg: '#1e293b',
-    headerBg: '#0f172a',
-    contentBg: '#020617', // Deepest black/slate for content background
-    // Feedback dots
-    dotBorder: '#1e293b',
-    dotPopoverBg: '#1e293b',
-    dotPopoverBorder: '#334155',
-    dotPopoverShadow: 'rgba(0, 0, 0, 0.4)',
-    dotMiniCardBg: '#1e293b',
-    dotMiniCardBorder: '#334155',
-    dotMiniCardShadow: 'rgba(0, 0, 0, 0.35)',
-    dotToolbarBg: '#1e293b',
-    dotToolbarBorder: '#334155',
-    dotToolbarShadow: 'rgba(0, 0, 0, 0.4)',
-    dotClusterBg: '#3b82f6',
-    dotClusterText: '#ffffff',
-    dotFocusRing: '#60a5fa',
-  }
-};
+    // Selection highlight
+    highlightBorder: t.color.accent,
+    highlightBg: t.color.accentTint,
+    highlightShadow: t.color.accentRing,
 
-// Helper function to get theme
+    // Tooltip
+    tooltipBg: t.color.text,
+    tooltipText: t.color.bg,
+
+    // Error state
+    errorBg: t.color.dangerBg,
+    errorBorder: t.color.danger,
+    errorText: t.color.danger,
+
+    // Generic shadow alias
+    shadow: t.mode === 'dark' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.1)',
+
+    // Feedback dots
+    dotBorder: t.color.surface,
+    dotPopoverBg: t.color.surface,
+    dotPopoverBorder: t.color.border,
+    dotPopoverShadow: t.mode === 'dark' ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)',
+    dotMiniCardBg: t.color.surface,
+    dotMiniCardBorder: t.color.border,
+    dotMiniCardShadow: t.mode === 'dark' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.12)',
+    dotToolbarBg: t.color.surface,
+    dotToolbarBorder: t.color.border,
+    dotToolbarShadow: t.mode === 'dark' ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.12)',
+    dotClusterBg: t.color.accent,
+    dotClusterText: '#ffffff',
+    dotFocusRing: t.color.accent,
+  };
+}
+
+export const lightTheme = { mode: 'light', colors: mapToLegacy(tokens.light) };
+export const darkTheme  = { mode: 'dark',  colors: mapToLegacy(tokens.dark)  };
+
 export const getTheme = (mode) => mode === 'dark' ? darkTheme : lightTheme;
 
-// Keyframe animations
+// --- keyframes (unchanged below this line) ---
 export const fadeIn = keyframes`
   from { opacity: 0; }
   to { opacity: 1; }
 `;
 
 export const slideUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translate(-50%, -45%) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
+  from { opacity: 0; transform: translate(-50%, -45%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 `;
 
 export const slideDown = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 `;
 
 export const slideInRight = keyframes`
   from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  to   { transform: translateX(0); }
 `;
 
 export const scaleIn = keyframes`
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
 `;
 
-export const spin = keyframes`
-  to { transform: rotate(360deg); }
-`;
+export const spin = keyframes`to { transform: rotate(360deg); }`;
 
 export const pulse = keyframes`
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(0.8);
-  }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.8); }
 `;
 
 export const pulseRing = keyframes`
-  0% {
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7);
-  }
-  50% {
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 12px rgba(102, 126, 234, 0);
-  }
-  100% {
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0);
-  }
+  0%   { box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7); }
+  50%  { box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 12px rgba(102, 126, 234, 0); }
+  100% { box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0); }
 `;
 
 export const dropdownSlideIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
 `;
 
-// Global styles for feedback mode
 export const FeedbackGlobalStyle = createGlobalStyle`
   body.feedback-mode-active {
     cursor: crosshair !important;
@@ -203,32 +135,20 @@ export const FeedbackGlobalStyle = createGlobalStyle`
     -moz-user-select: none !important;
     -ms-user-select: none !important;
   }
-
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
+    *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
   }
-
   @media print {
-    .feedback-overlay,
-    .feedback-backdrop,
-    .feedback-modal,
-    .feedback-tooltip,
-    .feedback-highlight {
-      display: none !important;
-    }
+    .feedback-overlay, .feedback-backdrop, .feedback-modal,
+    .feedback-tooltip, .feedback-highlight { display: none !important; }
   }
 `;
 
 export const dotPulse = keyframes`
   0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+  50%      { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
 `;
-
-// Note: Status options are now managed in FeedbackDashboard.jsx
-// See DEFAULT_STATUSES export from FeedbackDashboard for customization

@@ -37,6 +37,25 @@ This is the **safe** path. `withSecureDefaults` enforces origin allowlist, CSRF 
 
 Examples: [Next.js (secure session + anonymous capture)](example-nextjs/), [minimal Express](example-express/).
 
+## UI primitives (v2.3+)
+
+Phase B1 ships a shared design-token system and ten primitives you can
+use to build dashboards on top of the captured feedback data without
+relying on the bundled overlay UI. Single import:
+
+```js
+import {
+  Button, IconButton, Field, Select, Chip, Surface, Stack,
+  Tooltip, Spinner, Avatar, AvatarStack,
+} from 'react-visual-feedback/ui';
+```
+
+Wrap your app in `<UIThemeProvider mode="light">` (or `mode="dark"`)
+from `react-visual-feedback/ui` to apply the warm-stone / warm-charcoal
+palette. The widget's existing dashboard, modal, and dots automatically
+inherit the same palette via the legacy `theme.js` keys, so no other
+code change is required.
+
 ## Features
 
 ### Feedback Collection

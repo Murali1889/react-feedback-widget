@@ -5,3 +5,4 @@ example/dist/
 .DS_Store
 *.log
 .env
+.superpowers/
