@@ -175,6 +175,17 @@ export default [
     plugins: clientPlugins,
     external: ['react', 'react-dom', 'styled-components'],
   },
+  // Capture core (framework-agnostic — no React)
+  {
+    input: 'src/capture/core.js',
+    output: [
+      { file: 'dist/capture/core.js',     format: 'cjs', sourcemap: true, inlineDynamicImports: true },
+      { file: 'dist/capture/core.esm.js', format: 'esm', sourcemap: true, inlineDynamicImports: true },
+    ],
+    onwarn,
+    plugins: clientPlugins,
+    external: ['react', 'react-dom', 'styled-components'],
+  },
   // Capture worker (self-contained chunk)
   {
     input: 'src/capture/worker/feedback-capture-worker.js',
