@@ -43,7 +43,7 @@ describe('Evidence sections', () => {
 
   it('Source renders component breadcrumb and file path', () => {
     render(<SourceSection item={baseItem} />);
-    expect(screen.getByText(/Form/)).toBeInTheDocument();
+    expect(screen.getByText('Form › App')).toBeInTheDocument();
     expect(screen.getByText('src/Form.jsx:14')).toBeInTheDocument();
   });
 
