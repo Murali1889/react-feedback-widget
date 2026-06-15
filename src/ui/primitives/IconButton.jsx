@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled, { css } from 'styled-components';
 import { pickToken } from '../ThemeContext.jsx';
+import { Tooltip } from './Tooltip.jsx';
 
 const SIZES = { sm: 28, md: 32 };
 
@@ -48,7 +49,7 @@ const StyledIconButton = styled.button`
   }
 `;
 
-export const IconButton = React.forwardRef(function IconButton(
+const IconButtonRaw = React.forwardRef(function IconButtonRaw(
   {
     icon,
     variant = 'default',
@@ -81,6 +82,14 @@ export const IconButton = React.forwardRef(function IconButton(
       {icon}
     </StyledIconButton>
   );
+});
+
+export const IconButton = React.forwardRef(function IconButton(
+  { tooltip, ...rest }, ref
+) {
+  const btn = <IconButtonRaw ref={ref} {...rest} />;
+  if (!tooltip) return btn;
+  return <Tooltip content={tooltip}>{btn}</Tooltip>;
 });
 
 IconButton.displayName = 'IconButton';
