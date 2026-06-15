@@ -256,3 +256,97 @@ export function redactFeedbackEvidence(item, cfg) {
 
   return { data: out, appliedRules: [...appliedRules] };
 }
+
+// =============================================================
+// Auth helpers
+// =============================================================
+
+export async function resolveCsrfToken(authConfig) {
+  if (!authConfig) return null;
+  const t = authConfig.csrfToken;
+  if (typeof t === 'function') {
+    const v = await t();
+    return typeof v === 'string' && v ? v : null;
+  }
+  if (typeof t === 'string' && t) return t;
+  // Browser-only discovery: cookie + meta tag
+  if (typeof document !== 'undefined') {
+    const cookie = document.cookie || '';
+    const m = cookie.match(/(?:^|;\s*)(?:csrf-token|XSRF-TOKEN)=([^;]+)/);
+    if (m) return decodeURIComponent(m[1]);
+    const meta = document.querySelector?.('meta[name="csrf-token"]');
+    if (meta) return meta.getAttribute('content');
+  }
+  return null;
+}
+
+export async function getFeedbackAuthHeaders(authConfig) {
+  if (!authConfig || authConfig.mode === 'none') return {};
+
+  const headers = {};
+
+  if (authConfig.mode === 'bearer' || authConfig.mode === 'signed') {
+    if (typeof authConfig.getToken === 'function') {
+      const tok = await authConfig.getToken();
+      if (typeof tok === 'string' && tok) {
+        headers.Authorization = `Bearer ${tok}`;
+      }
+    }
+  }
+
+  if (authConfig.mode === 'session') {
+    const csrf = await resolveCsrfToken(authConfig);
+    if (csrf) headers['X-CSRF-Token'] = csrf;
+  }
+
+  if (typeof authConfig.getHeaders === 'function') {
+    const extra = await authConfig.getHeaders();
+    if (extra && typeof extra === 'object') {
+      Object.assign(headers, extra);
+    }
+  }
+
+  return headers;
+}
+
+const INSECURE_MODES = new Set([
+  'jira-automation', 'jiraAutomation',
+  'appsScript', 'apps-script',
+  'zapier',
+]);
+
+export function isInsecureWebhookMode(type) {
+  if (typeof type !== 'string') return false;
+  return INSECURE_MODES.has(type);
+}
+
+export function getDestinationPolicy(authContext, destination) {
+  // Hook point. By default, allow all destinations. Hosts override via authorize.
+  return { allowed: true, destination, reason: null };
+}
+
+export function getSubmissionState(item) {
+  if (!item) return 'idle';
+  const local = item.integrationState?.local?.status;
+  const jira = item.integrationState?.jira?.status;
+  const sheets = item.integrationState?.sheets?.status;
+  if ([jira, sheets].includes('pending') || local === 'pending') return 'submitting';
+  if ([jira, sheets, local].includes('error')) {
+    if ([jira, sheets].some((s) => s === 'created' || s === 'synced' || s === 'appended')) {
+      return 'partial';
+    }
+    return 'failed';
+  }
+  if (jira === 'created' || jira === 'synced' || sheets === 'appended' || sheets === 'synced' || local === 'saved') {
+    return 'submitted';
+  }
+  return 'idle';
+}
+
+export function getAuthState({ auth, lastError } = {}) {
+  if (!auth || auth.mode === 'none') return 'anonymous';
+  if (lastError?.code === 'unauthorized') return 'token_expired';
+  if (lastError?.code === 'forbidden') return 'unauthenticated';
+  if (!auth.mode) return 'misconfigured';
+  return 'authenticated';
+}
