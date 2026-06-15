@@ -141,4 +141,15 @@ export default [
       },
     ],
   },
+  // UI primitives bundle
+  {
+    input: 'src/ui/primitives/index.js',
+    output: [
+      { file: 'dist/ui/index.js',     format: 'cjs', sourcemap: true },
+      { file: 'dist/ui/index.esm.js', format: 'esm', sourcemap: true },
+    ],
+    onwarn,
+    plugins: clientPlugins,
+    external: ['react', 'react-dom', 'styled-components'],
+  },
 ];

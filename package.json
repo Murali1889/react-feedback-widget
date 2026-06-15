@@ -16,6 +16,11 @@
       "import": "./dist/lib/index.esm.js",
       "require": "./dist/lib/index.js"
     },
+    "./ui": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/ui/index.esm.js",
+      "require": "./dist/ui/index.js"
+    },
     "./server": {
       "types": "./dist/types.d.ts",
       "import": "./dist/server/index.js",
