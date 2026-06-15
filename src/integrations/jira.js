@@ -359,11 +359,35 @@ async function parseFormData(req) {
   throw new Error('Unable to parse request body');
 }
 
+let _jiraInsecureWarned = false;
+function warnIfInsecure(config) {
+  if (config.security || config.__suppressInsecureWarning || _jiraInsecureWarned) return;
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    _jiraInsecureWarned = true;
+    console.warn('[react-visual-feedback] createJiraHandler() called without withSecureDefaults wrapper in production. Wrap with withSecureDefaults({ authorize }) for origin, CSRF, rate-limit, and authorization checks. See docs/production-security-checklist.md');
+  }
+}
+
 /**
- * Create Jira handler with configuration
+ * Create Jira handler with configuration.
+ *
+ * Two call patterns:
+ *   1. Legacy: (req, res) => Response. Parses request itself.
+ *   2. Secure: (feedbackData, { authContext, securityContext }) — invoked by
+ *      withSecureDefaults with already-parsed, validated, redacted data.
  */
 export function createJiraHandler(config = {}) {
+  warnIfInsecure(config);
+
   const handler = async (req, res) => {
+    // Secure path: invoked by withSecureDefaults with parsed feedbackData + ctx.
+    if (res && typeof res === 'object' && res.authContext) {
+      const feedbackData = req;
+      const client = new JiraClient(config);
+      const result = await handleCreate(client, feedbackData, config);
+      return { data: result };
+    }
+
     try {
       // Parse body - supports both JSON and FormData
       const { action = 'create', feedbackData, issueKey, status, comment } = await parseFormData(req);
