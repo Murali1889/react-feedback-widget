@@ -49,14 +49,13 @@ const Overlay = styled.div`
 const Highlight = styled.div`
   position: absolute;
   border: 2px solid ${props => props.theme.colors.highlightBorder};
-  background: ${props => props.theme.colors.highlightBg};
+  background: transparent;
   pointer-events: none;
   z-index: 999999;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow:
-    0 0 0 4px ${props => props.theme.colors.highlightShadow},
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    0 0 0 1px ${props => props.theme.colors.highlightShadow},
+    0 4px 6px -1px rgba(0, 0, 0, 0.08);
   border-radius: 4px;
 `;
 

@@ -181,15 +181,17 @@ const MediaPreview = styled.div`
   position: relative;
   border-radius: 8px;
   overflow: hidden;
-  background: #000;
-  max-height: 160px;
+  background: ${props => props.theme.colors.cardBg};
+  border: 1px solid ${props => props.theme.colors.border};
+  max-height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   img, video {
-    max-width: 100%;
-    max-height: 160px;
+    display: block;
+    width: 100%;
+    max-height: 220px;
     object-fit: contain;
   }
 `;
