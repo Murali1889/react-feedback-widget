@@ -152,4 +152,15 @@ export default [
     plugins: clientPlugins,
     external: ['react', 'react-dom', 'styled-components'],
   },
+  // Dashboard / Command Center bundle
+  {
+    input: 'src/dashboard/index.js',
+    output: [
+      { file: 'dist/dashboard/index.js',     format: 'cjs', sourcemap: true },
+      { file: 'dist/dashboard/index.esm.js', format: 'esm', sourcemap: true },
+    ],
+    onwarn,
+    plugins: clientPlugins,
+    external: ['react', 'react-dom', 'styled-components'],
+  },
 ];
