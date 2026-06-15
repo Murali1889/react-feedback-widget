@@ -117,34 +117,71 @@ const ModalBody = styled.div`
 
 const TypeSelector = styled.div`
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 `;
 
 const TypePill = styled.button`
-  border: 1px solid ${props => props.$active ? 'transparent' : props.theme.colors.border};
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  background: ${props => props.$active 
-    ? (props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff') 
-    : 'transparent'};
-  
-  color: ${props => props.$active 
-    ? (props.theme.mode === 'dark' ? '#60a5fa' : '#2563eb') 
-    : props.theme.colors.textSecondary};
-    
-  border-color: ${props => props.$active 
-    ? (props.theme.mode === 'dark' ? '#60a5fa' : '#bfdbfe') 
+  position: relative;
+  border: 1px solid ${props => props.$active
+    ? (props.theme.mode === 'dark' ? '#60a5fa' : '#3b82f6')
     : props.theme.colors.border};
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.18s ease,
+              border-color 0.18s ease,
+              color 0.18s ease,
+              box-shadow 0.18s ease;
+
+  background: ${props => props.$active
+    ? (props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.18)' : '#eff6ff')
+    : 'transparent'};
+
+  color: ${props => props.$active
+    ? (props.theme.mode === 'dark' ? '#93c5fd' : '#1d4ed8')
+    : props.theme.colors.textSecondary};
+
+  box-shadow: ${props => props.$active
+    ? `0 0 0 3px ${props.theme.mode === 'dark' ? 'rgba(96, 165, 250, 0.18)' : 'rgba(59, 130, 246, 0.12)'}`
+    : 'none'};
 
   &:hover {
-    background: ${props => props.$active ? '' : props.theme.colors.hoverBg};
+    background: ${props => props.$active
+      ? (props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.24)' : '#dbeafe')
+      : props.theme.colors.hoverBg};
+    transform: translateY(-1px);
   }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px ${props => props.theme.mode === 'dark' ? 'rgba(96, 165, 250, 0.4)' : 'rgba(59, 130, 246, 0.3)'};
+  }
+`;
+
+const FieldLabel = styled.label`
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: ${props => props.theme.colors.textSecondary};
+  margin-bottom: 8px;
+  opacity: 0.85;
+`;
+
+const FieldRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
 const StyledTextArea = styled.textarea`
@@ -179,20 +216,61 @@ const StyledTextArea = styled.textarea`
 
 const MediaPreview = styled.div`
   position: relative;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   background: ${props => props.theme.colors.cardBg};
   border: 1px solid ${props => props.theme.colors.border};
-  max-height: 220px;
+  max-height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: zoom-in;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+
+  &:hover {
+    border-color: ${props => props.theme.mode === 'dark' ? '#475569' : '#cbd5e1'};
+    box-shadow: 0 6px 20px -8px rgba(15, 23, 42, 0.18);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(15, 23, 42, 0.04));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
 
   img, video {
     display: block;
     width: 100%;
-    max-height: 220px;
+    max-height: 240px;
     object-fit: contain;
+  }
+`;
+
+const ZoomedBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  cursor: zoom-out;
+  animation: ${fadeIn} 0.18s ease-out;
+
+  img {
+    max-width: 92vw;
+    max-height: 92vh;
+    border-radius: 8px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
   }
 `;
 
@@ -252,49 +330,76 @@ const IntegrationRow = styled.div`
 `;
 
 const IntegrationIcon = styled.button`
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid ${props => props.$active ? 'transparent' : props.theme.colors.border};
-  background: ${props => props.$active 
+  background: ${props => props.$active
     ? (props.$type === 'jira' ? '#0052CC' : props.$type === 'sheets' ? '#34A853' : props.theme.colors.textSecondary)
     : 'transparent'};
   color: ${props => props.$active ? 'white' : props.theme.colors.textTertiary};
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.18s ease,
+              border-color 0.18s ease,
+              color 0.18s ease,
+              box-shadow 0.18s ease;
   padding: 0;
+  box-shadow: ${props => props.$active
+    ? `0 4px 12px -4px ${props.$type === 'jira' ? 'rgba(0, 82, 204, 0.5)' : props.$type === 'sheets' ? 'rgba(52, 168, 83, 0.5)' : 'rgba(100, 116, 139, 0.4)'}`
+    : 'none'};
 
   &:hover {
     border-color: ${props => props.$active ? 'transparent' : props.theme.colors.textSecondary};
-    color: ${props => props.$active ? 'white' : props.theme.colors.textSecondary};
+    color: ${props => props.$active ? 'white' : props.theme.colors.textPrimary};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
 const SubmitButton = styled.button`
-  background: ${props => props.theme.colors.btnPrimaryBg};
+  background: ${props => props.theme.mode === 'dark' ? '#3b82f6' : '#2563eb'};
   color: white;
   border: none;
-  padding: 8px 20px;
-  border-radius: 6px;
+  padding: 10px 22px;
+  border-radius: 999px;
   font-weight: 600;
   font-size: 13px;
+  letter-spacing: 0.01em;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
+  gap: 8px;
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.18s ease,
+              box-shadow 0.18s ease;
+  box-shadow: 0 4px 14px -4px rgba(37, 99, 235, 0.45);
 
   &:hover:not(:disabled) {
-    background: ${props => props.theme.colors.btnPrimaryHover};
+    background: ${props => props.theme.mode === 'dark' ? '#2563eb' : '#1d4ed8'};
     transform: translateY(-1px);
+    box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.55);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.35), 0 4px 14px -4px rgba(37, 99, 235, 0.45);
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.4;
     cursor: not-allowed;
+    box-shadow: none;
   }
 `;
 
@@ -349,6 +454,7 @@ export const FeedbackModal = ({
   const [labels, setLabels] = useState([]);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState(null);
   const [manualScreenshot, setManualScreenshot] = useState(null);
   const [manualVideo, setManualVideo] = useState(null);
   const [manualFile, setManualFile] = useState(null);
@@ -490,61 +596,74 @@ export const FeedbackModal = ({
         </ModalHeader>
 
         <ModalBody>
-           <StyledTextArea
-              ref={descriptionRef}
-              placeholder="What's on your mind?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={isSubmitting}
-            />
+            <FieldRow>
+              <FieldLabel htmlFor="feedback-description">What's on your mind?</FieldLabel>
+              <StyledTextArea
+                id="feedback-description"
+                ref={descriptionRef}
+                placeholder="Describe what you saw, what you expected, and how to reproduce it…"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </FieldRow>
 
             {activeMedia ? (
-              <MediaPreview>
-                 {screenshot || manualScreenshot ? (
-                   <img src={screenshot || manualScreenshot} alt="Preview" />
-                 ) : (
-                   <video src={videoUrl} controls />
-                 )}
-                 {!screenshot && !videoBlob && (
-                    <RemoveMediaButton onClick={() => {
+              <FieldRow>
+                <FieldLabel>Evidence</FieldLabel>
+                <MediaPreview
+                  onClick={() => {
+                    const src = screenshot || manualScreenshot;
+                    if (src) setZoomedImage(src);
+                  }}
+                >
+                  {screenshot || manualScreenshot ? (
+                    <img src={screenshot || manualScreenshot} alt="Captured screenshot" />
+                  ) : (
+                    <video src={videoUrl} controls onClick={(e) => e.stopPropagation()} />
+                  )}
+                  {!screenshot && !videoBlob && (
+                    <RemoveMediaButton onClick={(e) => {
+                      e.stopPropagation();
                       setManualScreenshot(null);
                       setManualVideo(null);
                     }}>
                       <Trash2 size={14} />
                     </RemoveMediaButton>
-                 )}
-              </MediaPreview>
+                  )}
+                </MediaPreview>
+              </FieldRow>
             ) : (
               <EmptyMediaSlot onClick={() => screenshotInputRef.current?.click()}>
-                 <Image size={16} />
-                 <span>Attach Screenshot or Video</span>
-                 <input 
-                   type="file" 
-                   ref={screenshotInputRef} 
-                   accept="image/*,video/*" 
-                   style={{display:'none'}} 
-                   onChange={(e) => handleFile(e.target.files[0])}
-                 />
+                <Image size={16} />
+                <span>Attach Screenshot or Video</span>
+                <input
+                  type="file"
+                  ref={screenshotInputRef}
+                  accept="image/*,video/*"
+                  style={{display:'none'}}
+                  onChange={(e) => handleFile(e.target.files[0])}
+                />
               </EmptyMediaSlot>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500 }}>Category</span>
-               <TypeSelector>
-                  {FEEDBACK_TYPES.map(type => (
-                    <TypePill
-                      key={type.id}
-                      $active={feedbackType === type.id}
-                      onClick={() => setFeedbackType(type.id)}
-                    >
-                      {type.label}
-                    </TypePill>
-                  ))}
-               </TypeSelector>
-            </div>
+            <FieldRow>
+              <FieldLabel>Category</FieldLabel>
+              <TypeSelector>
+                {FEEDBACK_TYPES.map(type => (
+                  <TypePill
+                    key={type.id}
+                    $active={feedbackType === type.id}
+                    onClick={() => setFeedbackType(type.id)}
+                  >
+                    {type.label}
+                  </TypePill>
+                ))}
+              </TypeSelector>
+            </FieldRow>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500 }}>Priority</span>
+            <FieldRow>
+              <FieldLabel>Priority</FieldLabel>
               <TypeSelector>
                 {PRIORITY_OPTIONS.map(opt => (
                   <TypePill
@@ -553,14 +672,14 @@ export const FeedbackModal = ({
                     onClick={() => setPriority(opt.id)}
                     title={opt.hint}
                   >
-                    {opt.label}
+                    {opt.label} · {opt.hint}
                   </TypePill>
                 ))}
               </TypeSelector>
-            </div>
+            </FieldRow>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-              <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500, paddingTop: 6 }}>Labels</span>
+            <FieldRow>
+              <FieldLabel>Labels</FieldLabel>
               <TypeSelector>
                 {DEFAULT_SUGGESTED_LABELS.map(label => (
                   <TypePill
@@ -572,7 +691,7 @@ export const FeedbackModal = ({
                   </TypePill>
                 ))}
               </TypeSelector>
-            </div>
+            </FieldRow>
         </ModalBody>
 
         <Footer>
@@ -606,6 +725,12 @@ export const FeedbackModal = ({
           </SubmitButton>
         </Footer>
       </ModalContainer>
+
+      {zoomedImage && (
+        <ZoomedBackdrop onClick={() => setZoomedImage(null)}>
+          <img src={zoomedImage} alt="Zoomed screenshot" />
+        </ZoomedBackdrop>
+      )}
     </ThemeProvider>,
     document.body
   );

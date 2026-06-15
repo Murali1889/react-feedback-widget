@@ -927,7 +927,7 @@ export const FeedbackProvider = ({
 
         {isActive && !isCanvasActive && !isModalOpen && createPortal(
           <>
-            <Overlay ref={overlayRef} />
+            <Overlay ref={overlayRef} className="feedback-overlay" />
 
             {isTouchDevice && (
               <MobileBanner>
@@ -945,9 +945,10 @@ export const FeedbackProvider = ({
               <>
                 <Highlight
                   ref={highlightRef}
+                  className="feedback-highlight"
                   style={highlightStyle}
                 />
-                <Tooltip style={tooltipStyle}>
+                <Tooltip className="feedback-tooltip" style={tooltipStyle}>
                   {tooltipContent?.componentName && (
                     <>
                       <TooltipComponent>&lt;{tooltipContent.componentName}&gt;</TooltipComponent>

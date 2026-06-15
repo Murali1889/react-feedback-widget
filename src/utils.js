@@ -303,15 +303,36 @@ const cropImageToSelection = (dataUrl, contextRect, selectionRect, scale) => {
   });
 };
 
+/**
+ * Hide every feedback-tool overlay element via inline style so html2canvas
+ * doesn't render the picker highlight / tooltip / backdrop into the
+ * screenshot. Returns a restore fn that reinstates the original inline
+ * display values when called.
+ */
+const hideFeedbackOverlays = () => {
+  const sel = '.feedback-highlight, .feedback-tooltip, .feedback-overlay, .feedback-backdrop, .feedback-dots-container, [data-feedback-overlay]';
+  const restores = [];
+  document.querySelectorAll(sel).forEach((el) => {
+    const prev = el.style.display;
+    restores.push(() => { el.style.display = prev; });
+    el.style.display = 'none';
+  });
+  return () => restores.forEach((fn) => fn());
+};
+
 export const captureElementScreenshot = async (element) => {
   if (!element) return null;
 
   // 1. Get Geometry of the specific thing user clicked
   const selectionRect = element.getBoundingClientRect();
-  
+
   // 2. Find the Context (Parent with Background)
   const contextElement = getContextElement(element);
   const contextRect = contextElement.getBoundingClientRect();
+
+  // 2a. Hide our own picker chrome BEFORE the capture so it can't bleed
+  //     into the screenshot (the red arch users were seeing).
+  const restoreOverlays = hideFeedbackOverlays();
   
   // 3. High Quality Scale
   const SCALE = 3;
@@ -373,8 +394,10 @@ export const captureElementScreenshot = async (element) => {
 
   } catch (e) {
     // Screenshot failed
+  } finally {
+    restoreOverlays();
   }
-  
+
   return null;
 };
 
