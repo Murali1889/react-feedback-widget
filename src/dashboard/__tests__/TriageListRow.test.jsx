@@ -29,11 +29,11 @@ describe('TriageListRow', () => {
     expect(fn).toHaveBeenCalledWith('1');
   });
 
-  it('aria-selected reflects prop', () => {
+  it('aria-current reflects selected prop', () => {
     const { rerender } = render(<TriageListRow item={base} selected={false} onSelect={() => {}} />);
-    expect(screen.getByRole('button')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-current');
     rerender(<TriageListRow item={base} selected={true} onSelect={() => {}} />);
-    expect(screen.getByRole('button')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button')).toHaveAttribute('aria-current', 'true');
   });
 
   it('renders screenshot thumbnail when item has screenshot', () => {

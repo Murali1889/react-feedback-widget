@@ -86,7 +86,7 @@ export function TriageListRow({ item, selected, onSelect }) {
   const hasImg = item.screenshot && !imgFailed;
 
   return (
-    <Row role="button" tabIndex={0} aria-selected={selected} onClick={fire} onKeyDown={onKey} data-id={item.id}>
+    <Row role="button" tabIndex={0} aria-current={selected ? 'true' : undefined} onClick={fire} onKeyDown={onKey} data-id={item.id}>
       <Thumb>
         {hasImg
           ? <ThumbImg src={item.screenshot} alt="" onError={() => setImgFailed(true)} />
