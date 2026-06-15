@@ -24,6 +24,9 @@ import {
   resolveRedactionConfig,
   redactFeedbackEvidence,
 } from './lib/feedbackSecurity.js';
+import { CaptureProvider } from './capture/CaptureProvider.jsx';
+import { CaptureContext } from './capture/CaptureContext.jsx';
+import { runViaWorker } from './capture/workerClient.js';
 import { FeedbackDots } from './FeedbackDots.jsx';
 import { MobileTrigger } from './MobileTrigger.jsx';
 
@@ -285,6 +288,8 @@ export const FeedbackProvider = ({
   feedbackDotsData,
   // Mobile
   enableMobileFeedback = true,
+  // AI-actionable capture (Phase C); when omitted the widget behaves identically to post-B2
+  captureConfig,
   // Security (Phase A)
   auth,                  // { mode: 'none'|'session'|'bearer'|'signed', getToken?, getHeaders?, csrfToken? }
   redact = 'default',    // 'default' | 'strict' | 'off' | FeedbackRedactionConfig
@@ -695,6 +700,25 @@ export const FeedbackProvider = ({
         await saveFeedbackToLocalStorage(processedData);
       }
 
+      if (captureConfig && captureRef.current) {
+        try {
+          const ticket = await runViaWorker({
+            item: processedData,
+            interactions: captureRef.current.getInteractions(),
+            errors: captureRef.current.getErrors(),
+            routes: captureRef.current.getRoutes(),
+            fiberSnapshot: processedData.elementInfo?.fiberSnapshot || {},
+            buildInfo: captureRef.current.getBuildInfo(),
+            flags: await captureRef.current.getFlags(),
+            framesToResolve: [],
+            redactConfig: 'default',
+          });
+          processedData = { ...processedData, aiTicket: ticket };
+        } catch {
+          // Ticket assembly failures never block submission.
+        }
+      }
+
       if (onSubmit && typeof onSubmit === 'function') {
         await onSubmit(processedData);
       }
@@ -877,8 +901,14 @@ export const FeedbackProvider = ({
 
   const tooltipContent = getTooltipContent();
 
+  const captureRef = useRef(null);
+  function CaptureReader() {
+    const ctx = React.useContext(CaptureContext);
+    captureRef.current = ctx;
+    return null;
+  }
 
-  return (
+  const renderTree = (
     <FeedbackContext.Provider value={{
       isActive,
       setIsActive,
@@ -1022,6 +1052,10 @@ export const FeedbackProvider = ({
       </ThemeProvider>
     </FeedbackContext.Provider>
   );
+
+  return captureConfig
+    ? <CaptureProvider config={captureConfig}><CaptureReader />{renderTree}</CaptureProvider>
+    : renderTree;
 };
 
 export const useFeedback = () => {

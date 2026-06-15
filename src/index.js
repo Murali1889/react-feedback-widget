@@ -4,6 +4,7 @@ export { FeedbackProvider, useFeedback } from './FeedbackProvider';
 export { FeedbackModal } from './FeedbackModal';
 export { FeedbackDashboard, saveFeedbackToLocalStorage, DEFAULT_STATUSES } from './FeedbackDashboard';
 export { FeedbackCommandCenter } from './dashboard/FeedbackCommandCenter.jsx';
+export { FeedbackErrorBoundary } from './capture/FeedbackErrorBoundary.jsx';
 export { FeedbackTrigger } from './FeedbackTrigger';
 export { CanvasOverlay } from './CanvasOverlay';
 export { FeedbackDots } from './FeedbackDots';
