@@ -412,6 +412,18 @@ export const FeedbackModalWorkspace = (props) => {
     return () => { cancelled = true; };
   }, [isOpen, elementInfo]);
 
+  // Memoize the test scaffold. Must run on every render — keep it
+  // ABOVE the `if (!isOpen) return null` early return so React's
+  // hook-count invariant holds when the modal opens/closes.
+  const testScaffold = useMemo(() =>
+    generateTestScaffold({
+      elementInfo,
+      description: s.description,
+      networkLog: props.eventLogs || [],
+    }),
+    [elementInfo, s.description, props.eventLogs]
+  );
+
   if (!isOpen) return null;
 
   const sourceLabel = elementInfo?.sourceFile
@@ -442,15 +454,6 @@ export const FeedbackModalWorkspace = (props) => {
       return next;
     });
   };
-
-  const testScaffold = useMemo(() =>
-    generateTestScaffold({
-      elementInfo,
-      description: s.description,
-      networkLog: props.eventLogs || [],
-    }),
-    [elementInfo, s.description, props.eventLogs]
-  );
 
   const handleCopy = async (text) => {
     try {
