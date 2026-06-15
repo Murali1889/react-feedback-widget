@@ -2,7 +2,13 @@
 
 /**
  * A class to handle screen, audio, and browser event recording.
- * Captures: console, network (fetch/XHR), localStorage, sessionStorage, IndexedDB
+ * Captures: console, network (fetch/XHR), localStorage, sessionStorage,
+ * IndexedDB, interactions (click/pointerdown/focus/input/change/submit/
+ * keydown), and route changes (pushState/replaceState/popstate/hashchange).
+ *
+ * Every event lands in `this.events` with a `timestamp` in milliseconds
+ * relative to the recording start, so a downstream player or AI ticket
+ * can scrub the video and align each row to its frame.
  */
 export class SessionRecorder {
   constructor() {
@@ -23,6 +29,10 @@ export class SessionRecorder {
     this.originalStorageRemoveItem = null;
     this.originalStorageClear = null;
     this.originalIDBOpen = null;
+    this.originalPushState = null;
+    this.originalReplaceState = null;
+    this._interactionHandlers = null;
+    this._routeHandlers = null;
   }
 
   /**
@@ -404,6 +414,159 @@ export class SessionRecorder {
     }
   }
 
+  // ===================================================================
+  // Interaction Interception (clicks + form events + keydown)
+  // ===================================================================
+
+  _targetOf(el) {
+    if (!el || el.nodeType !== 1) return null;
+    let selector = '';
+    try {
+      if (el.id) selector = `#${el.id}`;
+      else {
+        const tag = el.tagName.toLowerCase();
+        const cls = (el.className && typeof el.className === 'string')
+          ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.')
+          : '';
+        selector = `${tag}${cls}`;
+      }
+    } catch { selector = el.tagName?.toLowerCase?.() || 'element'; }
+    let label = (el.getAttribute?.('aria-label')
+      || el.innerText?.trim?.()
+      || el.textContent?.trim?.()
+      || el.value
+      || '').slice(0, 60);
+    return { selector, label, role: el.getAttribute?.('role') || null };
+  }
+
+  _isSensitiveInput(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (el.tagName === 'INPUT' && el.type === 'password') return 'password';
+    const ac = el.getAttribute?.('autocomplete') || '';
+    if (ac.startsWith('cc-')) return 'cc';
+    if (el.closest?.('[data-feedback-redact="true"]')) return 'host-marker';
+    return false;
+  }
+
+  _patchInteractions() {
+    const self = this;
+
+    const onClick = (e) => {
+      self.events.push({
+        type: 'interaction', kind: 'click',
+        target: self._targetOf(e.target),
+        timestamp: self._getTimestamp(),
+      });
+    };
+    const onPointer = (e) => {
+      if (e.pointerType === 'mouse') return; // mouse already covered by click
+      self.events.push({
+        type: 'interaction', kind: 'pointerdown',
+        target: self._targetOf(e.target),
+        timestamp: self._getTimestamp(),
+      });
+    };
+    const onFocusIn = (e) => {
+      self.events.push({
+        type: 'interaction', kind: 'focus',
+        target: self._targetOf(e.target),
+        timestamp: self._getTimestamp(),
+      });
+    };
+    const onInput = (e) => {
+      const reason = self._isSensitiveInput(e.target);
+      const base = {
+        type: 'interaction', kind: 'input',
+        target: self._targetOf(e.target),
+        timestamp: self._getTimestamp(),
+      };
+      if (reason) self.events.push({ ...base, redacted: reason });
+      else self.events.push({ ...base, value: String(e.target.value || '').slice(0, 200) });
+    };
+    const onSubmit = (e) => {
+      self.events.push({
+        type: 'interaction', kind: 'submit',
+        target: self._targetOf(e.target),
+        timestamp: self._getTimestamp(),
+      });
+    };
+    const onKey = (e) => {
+      const NOTABLE = ['Enter', 'Tab', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+      if (!NOTABLE.includes(e.key)) return;
+      self.events.push({
+        type: 'interaction', kind: 'keydown', key: e.key,
+        target: self._targetOf(e.target),
+        timestamp: self._getTimestamp(),
+      });
+    };
+
+    const opts = { capture: true, passive: true };
+    document.addEventListener('click', onClick, opts);
+    document.addEventListener('pointerdown', onPointer, opts);
+    document.addEventListener('focusin', onFocusIn, opts);
+    document.addEventListener('input', onInput, opts);
+    document.addEventListener('change', onInput, opts);
+    document.addEventListener('submit', onSubmit, opts);
+    document.addEventListener('keydown', onKey, opts);
+
+    this._interactionHandlers = { onClick, onPointer, onFocusIn, onInput, onSubmit, onKey, opts };
+  }
+
+  _unpatchInteractions() {
+    if (!this._interactionHandlers) return;
+    const { onClick, onPointer, onFocusIn, onInput, onSubmit, onKey, opts } = this._interactionHandlers;
+    document.removeEventListener('click', onClick, opts);
+    document.removeEventListener('pointerdown', onPointer, opts);
+    document.removeEventListener('focusin', onFocusIn, opts);
+    document.removeEventListener('input', onInput, opts);
+    document.removeEventListener('change', onInput, opts);
+    document.removeEventListener('submit', onSubmit, opts);
+    document.removeEventListener('keydown', onKey, opts);
+    this._interactionHandlers = null;
+  }
+
+  // ===================================================================
+  // Route Interception (history + hashchange)
+  // ===================================================================
+
+  _patchRoutes() {
+    const self = this;
+    const pushRoute = (kind, to, from) => self.events.push({
+      type: 'route', kind, from, to, timestamp: self._getTimestamp(),
+    });
+
+    this.originalPushState = history.pushState;
+    history.pushState = function(...args) {
+      const from = location.href;
+      const ret = self.originalPushState.apply(this, args);
+      pushRoute('pushState', location.href, from);
+      return ret;
+    };
+
+    this.originalReplaceState = history.replaceState;
+    history.replaceState = function(...args) {
+      const from = location.href;
+      const ret = self.originalReplaceState.apply(this, args);
+      pushRoute('replaceState', location.href, from);
+      return ret;
+    };
+
+    const onPop = () => pushRoute('popstate', location.href, null);
+    const onHash = () => pushRoute('hashchange', location.href, null);
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('hashchange', onHash);
+    this._routeHandlers = { onPop, onHash };
+  }
+
+  _unpatchRoutes() {
+    if (this.originalPushState) { history.pushState = this.originalPushState; this.originalPushState = null; }
+    if (this.originalReplaceState) { history.replaceState = this.originalReplaceState; this.originalReplaceState = null; }
+    if (this._routeHandlers) {
+      window.removeEventListener('popstate', this._routeHandlers.onPop);
+      window.removeEventListener('hashchange', this._routeHandlers.onHash);
+      this._routeHandlers = null;
+    }
+  }
 
   // ===================================================================
   // Media Recording
@@ -507,6 +670,8 @@ export class SessionRecorder {
     this._patchXHR();
     this._patchStorage();
     this._patchIndexedDB();
+    this._patchInteractions();
+    this._patchRoutes();
 
     return this.stream;
   }
@@ -529,6 +694,8 @@ export class SessionRecorder {
     this._unpatchXHR();
     this._unpatchStorage();
     this._unpatchIndexedDB();
+    this._unpatchInteractions();
+    this._unpatchRoutes();
 
     return new Promise((resolve) => {
       if (!this.mediaRecorder) {
