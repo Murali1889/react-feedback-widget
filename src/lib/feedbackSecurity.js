@@ -378,3 +378,39 @@ export function getAuthState({ auth, lastError } = {}) {
   if (!auth.mode) return 'misconfigured';
   return 'authenticated';
 }
+
+// =====================================================================
+// Phase C redaction extensions
+// =====================================================================
+
+export function redactInteractionTrail(trail, cfg) {
+  if (!Array.isArray(trail)) return [];
+  return trail.map((ev) => {
+    if (!ev || ev.redacted || typeof ev.value !== 'string') return ev;
+    return { ...ev, value: redactInlineSecrets(ev.value, cfg) };
+  });
+}
+
+export function redactFiberSnapshot(tree, cfg) {
+  if (!tree || typeof tree !== 'object') return tree;
+  const out = {};
+  for (const name of Object.keys(tree)) {
+    const node = tree[name];
+    out[name] = {
+      props: node?.props ? redactObjectByKeys(node.props, cfg.redactBodyKeys) : {},
+      state: node?.state ? redactObjectByKeys(node.state, cfg.redactBodyKeys) : null,
+    };
+  }
+  return out;
+}
+
+const BUILD_INFO_SENSITIVE = /token|secret|apikey|api_key|password|credential/i;
+
+export function redactBuildInfo(info, _cfg) {
+  if (!info || typeof info !== 'object') return info;
+  const out = {};
+  for (const k of Object.keys(info)) {
+    out[k] = BUILD_INFO_SENSITIVE.test(k) ? '<redacted>' : info[k];
+  }
+  return out;
+}

@@ -4,6 +4,48 @@
 
 A powerful, visual feedback collection tool for React applications with screen recording, session replay, and an integrated dashboard for managing user feedback.
 
+## Zero-effort integration (v2.3+)
+
+The fastest path: drop the provider in once, then open `node_modules/react-visual-feedback/dist/viewer.html` (or copy it to your `public/` folder) any time you want to see all the feedback that's been collected in this browser.
+
+```jsx
+// Anywhere in your app shell
+import { FeedbackProvider } from 'react-visual-feedback';
+
+<FeedbackProvider dashboard>
+  <YourApp />
+</FeedbackProvider>
+```
+
+That's the whole integration. `Alt+A` opens the capture modal, `Alt+Q` opens the Command Center dashboard. Feedback is saved in this browser's `localStorage`.
+
+### View collected feedback (no React app needed)
+
+After the provider has been used, open this URL in any browser:
+
+```
+file:///path/to/your/project/node_modules/react-visual-feedback/dist/viewer.html
+```
+
+…or serve `dist/viewer.html` from your project's `public/` folder so anyone on your team can hit `https://your-app.com/viewer.html` to see what's been reported. The viewer reads from this browser's `localStorage` (same key the widget writes to), live-refreshes on focus, supports status changes and deletion. No build, no server, no install.
+
+### Where the data lives
+
+- **Default:** the browser's `localStorage` under key `react-feedback-data`.
+- **Server too (optional, recommended for teams):** pass a `dataSource` prop and the widget writes to your backend in addition to local storage:
+  ```jsx
+  <FeedbackProvider
+    dashboard
+    dataSource={{
+      load:    () => fetch('/api/feedback').then(r => r.json()),
+      save:    (item) => fetch('/api/feedback', { method: 'POST', body: JSON.stringify(item) }),
+      remove:  (id) => fetch(`/api/feedback/${id}`, { method: 'DELETE' }),
+      subscribe: (cb) => { /* optional: live updates via SSE/WebSocket */ return () => {}; },
+    }}
+  />
+  ```
+  The viewer also picks up `dataSource` when you mount it in your own React app.
+
 ## Secure setup in 10 lines (v2.3+)
 
 ```jsx

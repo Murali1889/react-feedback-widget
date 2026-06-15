@@ -26,6 +26,22 @@ export function SourceSection({ item }) {
       {ei.sourceFile && <Row><Label>File</Label><Mono>{ei.sourceFile}</Mono></Row>}
       {ei.selector && <Row><Label>Selector</Label><Mono>{ei.selector}</Mono></Row>}
       {item.viewport && <Row><Label>Viewport</Label><Value>{`${item.viewport.width}×${item.viewport.height}`}</Value></Row>}
+      {item.aiTicket?.json?.where?.codeSnippet?.length > 0 && (
+        <pre style={{
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 12,
+          background: 'var(--cs-canvas, #f7f7f3)',
+          padding: '10px 12px',
+          borderRadius: 8,
+          overflowX: 'auto',
+          marginTop: 8,
+        }}>
+          {item.aiTicket.json.where.codeSnippet.map((l) => {
+            const num = String(l.line).padStart(4, ' ');
+            return `${l.highlight ? '>>>' : '   '} ${num}  ${l.text}\n`;
+          }).join('')}
+        </pre>
+      )}
     </Stack>
   );
 }

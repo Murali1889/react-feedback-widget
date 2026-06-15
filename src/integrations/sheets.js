@@ -520,6 +520,14 @@ async function handleAppend(client, feedbackData, config) {
   // Transform feedback to row
   const row = feedbackToSheetRow(feedbackData, config);
 
+  // Phase C: append two columns (Markdown + JSON), truncated for cell safety.
+  if (feedbackData.aiTicket) {
+    row.push(
+      String(feedbackData.aiTicket.markdown || '').slice(0, 4000),
+      JSON.stringify(feedbackData.aiTicket.json || {}).slice(0, 4000),
+    );
+  }
+
   // Append row
   const result = await client.appendRow(row);
 

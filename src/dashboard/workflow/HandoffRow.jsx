@@ -9,6 +9,7 @@ const FORMATS = [
   { value: 'full', label: 'Full' },
   { value: 'jira', label: 'Jira-ready' },
   { value: 'slack', label: 'Slack-ready' },
+  { value: 'ai', label: 'AI ticket (Markdown)' },
 ];
 
 // Plain span styled like the Button — avoids nested-interactive a11y
@@ -32,7 +33,9 @@ const ButtonLike = styled.span`
 export function HandoffRow({ item }) {
   const [copied, setCopied] = useState(false);
   const doCopy = async (format) => {
-    const text = createFeedbackHandoffText(item, { format });
+    let text;
+    if (format === 'ai' && item.aiTicket?.markdown) text = item.aiTicket.markdown;
+    else text = createFeedbackHandoffText(item, { format });
     try {
       await navigator.clipboard?.writeText?.(text);
       setCopied(true);

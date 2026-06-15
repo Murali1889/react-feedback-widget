@@ -90,9 +90,15 @@ export function withSecureDefaults(hooks = {}) {
         }
 
         // 6. Redact
-        const redacted = customRedact
+        let redacted = customRedact
           ? await customRedact(v.data, authContext)
           : redactFeedbackEvidence(v.data, redactConfig).data;
+
+        // 6.5. Optional source-map resolution
+        if (typeof hooks.resolveSourceMap === 'function') {
+          const { runResolveSourceMap } = await import('./sourcemap-resolver.js');
+          redacted = await runResolveSourceMap(redacted, hooks.resolveSourceMap);
+        }
 
         const securityContext = {
           projectId: authContext.projectId,

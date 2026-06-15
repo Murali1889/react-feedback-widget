@@ -70,6 +70,7 @@ export default [
       file: 'dist/server/index.js',
       format: 'esm',
       sourcemap: true,
+      inlineDynamicImports: true,
     },
     onwarn,
     plugins: serverPlugins,
@@ -162,5 +163,33 @@ export default [
     onwarn,
     plugins: clientPlugins,
     external: ['react', 'react-dom', 'styled-components'],
+  },
+  // Capture client (main thread)
+  {
+    input: 'src/capture/index.js',
+    output: [
+      { file: 'dist/capture/index.js',     format: 'cjs', sourcemap: true },
+      { file: 'dist/capture/index.esm.js', format: 'esm', sourcemap: true },
+    ],
+    onwarn,
+    plugins: clientPlugins,
+    external: ['react', 'react-dom', 'styled-components'],
+  },
+  // Capture worker (self-contained chunk)
+  {
+    input: 'src/capture/worker/feedback-capture-worker.js',
+    output: { file: 'dist/capture/worker.js', format: 'esm', sourcemap: true },
+    onwarn,
+    plugins: [
+      ...clientPlugins,
+      {
+        name: 'copy-viewer-html',
+        writeBundle() {
+          fs.mkdirSync('dist', { recursive: true });
+          fs.copyFileSync('src/capture/viewer.html', 'dist/viewer.html');
+        },
+      },
+    ],
+    external: [],
   },
 ];

@@ -15,6 +15,21 @@
 - No breaking changes. The legacy color key list is enforced by a backcompat test snapshot.
 - `StatusBadge` and `StatusDropdown` keep their existing implementation and `{status, statuses}` API; the Command Center introduces a separate internal `WorkflowStatusControl` rather than touching them.
 
+### Added — Phase C (AI-actionable capture)
+- New `react-visual-feedback/capture` subpath with `CaptureProvider`, `FeedbackErrorBoundary`, `runViaWorker`, `resolveBuildInfo`.
+- Optional `captureConfig` prop on `FeedbackProvider` opting into interaction/route/error capture, fiber snapshot, build-info, feature-flag snapshot. Without it, behaviour is byte-identical to post-B2.
+- Lazy Web Worker bundle (`dist/capture/worker.js`) for source-map deminification, code-context extraction, redaction, and ticket assembly. Idle-killed after 30s.
+- Optional `resolveSourceMap` hook on `withSecureDefaults` for server-side source-map fallback. Maps stay off the public bundle.
+- Three new redaction helpers in `feedbackSecurity`: `redactInteractionTrail`, `redactFiberSnapshot`, `redactBuildInfo`.
+- HandoffRow gains an "AI ticket (Markdown)" format. SourceSection inlines the resolved code snippet.
+- Jira handler attaches `feedback-ai.md` + `feedback-ai.json`. Sheets appends two truncated columns.
+- **Standalone HTML viewer** (`dist/viewer.html`) — open in any browser; reads `localStorage` and renders the Command Center. Zero install, zero config.
+- New `source-map-js` runtime dependency, loaded only inside the worker chunk.
+- New docs: `docs/zero-effort-integration.md`, `docs/ai-capture-setup.md`, `docs/capture-performance.md`.
+
+### Compatibility
+- No breaking changes. Default behaviour (no `captureConfig`, no `dataSource`, no `withSecureDefaults`) is byte-identical to post-B2.
+
 ### Added — Phase B2 (Command Center)
 - **Command Center workspace.** Wider three-pane shell (Triage list · Evidence Stack · Workflow Panel) replaces the internals of `FeedbackDashboard` while keeping every public export byte-compatible. Card-with-thumbnail triage rows, collapsible Evidence Stack with always-visible section summaries, full Workflow Panel (status, severity, owner, customer, integrations, copy-as handoff, danger zone with inline confirm), Summary Bar with status counts + needs-attention shortcuts as one-click filters.
 - New `react-visual-feedback/dashboard` subpath export with `FeedbackCommandCenter`, hooks (`useFeedbackStore`, `useSectionState`, `useKeyboardShortcuts`, `useSelection`, `useCommandCenter`), and pure helpers (`getFilteredItems`, `getStatusCounts`, `getAttentionCounts`).
