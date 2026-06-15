@@ -111,17 +111,11 @@ const Title = styled.div`
   letter-spacing: -0.01em;
 `;
 
-const TitleIconBox = styled.div`
-  width: 32px; height: 32px;
-  border-radius: 9px;
-  background: linear-gradient(135deg,
-    ${p => p.theme.mode === 'dark' ? '#3b82f6' : '#6366f1'},
-    ${p => p.theme.mode === 'dark' ? '#6366f1' : '#3b82f6'});
-  color: white;
+const TitleIcon = styled.div`
+  width: 28px; height: 28px;
   display: inline-flex; align-items: center; justify-content: center;
-  box-shadow:
-    0 6px 14px -4px rgba(99, 102, 241, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: ${p => p.theme.mode === 'dark' ? '#a5b4fc' : '#4f46e5'};
+  flex-shrink: 0;
 `;
 
 const Subtitle = styled.div`
@@ -326,34 +320,27 @@ const SourceChip = styled.div`
 
 const EmptyMedia = styled.button`
   position: relative;
-  border: 1.5px dashed ${p => p.theme.mode === 'dark' ? '#475569' : '#cbd5e1'};
-  border-radius: 16px;
-  padding: 36px 18px;
-  background:
-    radial-gradient(at center,
-      ${p => p.theme.mode === 'dark' ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.04)'},
-      transparent 70%);
+  border: 1.5px dashed ${p => p.theme.colors.border};
+  border-radius: 14px;
+  padding: 32px 18px;
+  background: transparent;
   color: ${p => p.theme.colors.textSecondary};
   font-size: 13px; font-weight: 500;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
   cursor: pointer; transition: all 0.22s ease;
   width: 100%;
 
-  .icon-wrap {
-    width: 48px; height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg,
-      ${p => p.theme.mode === 'dark' ? 'rgba(99, 102, 241, 0.18)' : 'rgba(99, 102, 241, 0.1)'},
-      ${p => p.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.1)'});
-    color: ${p => p.theme.mode === 'dark' ? '#a5b4fc' : '#6366f1'};
-    display: inline-flex; align-items: center; justify-content: center;
+  .empty-icon {
+    color: ${p => p.theme.colors.textTertiary};
     animation: ${float} 4s ease-in-out infinite;
+    transition: color 0.22s ease;
   }
 
   &:hover {
     color: ${p => p.theme.colors.textPrimary};
     border-color: ${p => p.theme.mode === 'dark' ? '#6366f1' : '#a5b4fc'};
     transform: translateY(-1px);
+    .empty-icon { color: ${p => p.theme.mode === 'dark' ? '#a5b4fc' : '#6366f1'}; }
   }
 `;
 
@@ -423,7 +410,7 @@ export const FeedbackModalTwoColumn = (props) => {
       <Modal role="dialog" aria-modal="true" aria-label="Send feedback">
         <Header>
           <Title>
-            <TitleIconBox><MessageSquare size={16} /></TitleIconBox>
+            <TitleIcon><MessageSquare size={20} strokeWidth={2} /></TitleIcon>
             <div>
               <div>Send Feedback</div>
               <Subtitle>Tell us what happened — we'll handle the rest</Subtitle>
@@ -491,7 +478,7 @@ export const FeedbackModalTwoColumn = (props) => {
               </EvidenceCard>
             ) : (
               <EmptyMedia onClick={() => s.screenshotInputRef.current?.click()}>
-                <div className="icon-wrap"><ImageIcon size={22} /></div>
+                <ImageIcon className="empty-icon" size={28} strokeWidth={1.5} />
                 Attach a screenshot or video
                 <span style={{ fontSize: 11, opacity: 0.7 }}>
                   PNG · JPG · MP4 · WebM
