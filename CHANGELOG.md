@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Design tokens** — semantic profiles (`light`, `dark`) under `src/ui/tokens.js`. Roles for color (`accent`, `surface`, `textMuted`, …), space, radius, font, shadow, motion.
+- **Ten UI primitives** under `react-visual-feedback/ui`: `Button`, `IconButton`, `Field`, `Select`, `Chip`, `Surface`, `Stack`, `Tooltip`, `Spinner`, `Avatar` (+ `AvatarStack`).
+- `UIThemeProvider`, `useUITokens()` hook, `pickToken()` styled-components helper.
+- 93 new tests (Vitest + jsdom + @testing-library/react + jest-axe). Every primitive's default render is gated by `axe-core` for zero a11y violations.
+
+### Changed
+- `theme.js` exports `lightTheme` and `darkTheme` with the same key shape; values are now derived from the new tokens (warm stone / warm charcoal / warm teal). Every consumer (FeedbackProvider, modal, dashboard, dots, replay) inherits the new palette without code changes.
+
+### Compatibility
+- No breaking changes. The legacy color key list is enforced by a backcompat test snapshot.
+- `StatusBadge` and `StatusDropdown` keep their existing implementation and `{status, statuses}` API (refresh deferred to Phase B2 where they can be rebuilt against the Command Center data flow).
+
 ## [2.3.0] — 2026-06-15
 
 Foundation release for the Feedback Command Center. No breaking changes.
