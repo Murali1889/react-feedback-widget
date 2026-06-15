@@ -28,10 +28,19 @@ export function verifySubmissionToken(token: string) {
 /**
  * DEMO ONLY: replace with your real auth (Auth.js, Clerk, custom JWT, etc.).
  * Anyone with the `demo-session=ok` cookie is treated as logged in.
+ *
+ * Note: `authorize` callbacks receive the normalized request shape from
+ * withSecureDefaults, NOT a raw Web Request. Use `req.cookies[name]`,
+ * `req.headers[name]` (already lowercased), or `req.raw` for the original.
  */
-export async function getDemoSession(req: Request) {
-  const cookie = req.headers.get('cookie') || '';
-  if (cookie.includes('demo-session=ok')) {
+type FeedbackReqLike = {
+  cookies: Record<string, string>
+  headers: Record<string, string>
+  raw: Request
+}
+
+export async function getDemoSession(req: FeedbackReqLike) {
+  if (req.cookies?.['demo-session'] === 'ok') {
     return { userId: 'demo-user', projectId: 'DEMO', role: 'developer' };
   }
   return null;

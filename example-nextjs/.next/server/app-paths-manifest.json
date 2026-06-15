@@ -1,3 +1,4 @@
 {
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/api/feedback/jira/route": "app/api/feedback/jira/route.js"
 }

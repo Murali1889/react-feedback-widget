@@ -68,10 +68,34 @@ export interface AuthorizedFeedbackContext {
   [key: string]: unknown;
 }
 
+/**
+ * Normalized request shape passed to `authorize` and other hooks.
+ *
+ * - Use `cookies['name']` for cookie reads (already parsed).
+ * - Use `headers['name']` for headers (already lowercased).
+ * - Use `raw` to fall back to the underlying Next.js / Express / Web Request.
+ *
+ * Do NOT call `req.headers.get(...)` — `headers` is a plain object, not a
+ * Web Headers instance. That call returns undefined silently and is the
+ * single most common integration bug. The type below makes the correct
+ * shape explicit so this misuse becomes a compile error.
+ */
+export interface FeedbackRequestLike {
+  method: string;
+  url: string;
+  origin: string | null;
+  headers: Record<string, string>;
+  cookies: Record<string, string>;
+  ip: string | null;
+  /** Underlying request: Next.js Request, Express req, or Web Request. */
+  raw: unknown;
+  readBody: () => Promise<unknown>;
+}
+
 export interface FeedbackServerSecurityHooks {
-  authorize: (req: unknown) => Promise<AuthorizedFeedbackContext>;
-  validateOrigin?: (req: unknown) => boolean | Promise<boolean>;
-  rateLimit?: (req: unknown, ctx: AuthorizedFeedbackContext) => Promise<void>;
+  authorize: (req: FeedbackRequestLike) => Promise<AuthorizedFeedbackContext>;
+  validateOrigin?: (req: FeedbackRequestLike) => boolean | Promise<boolean>;
+  rateLimit?: (req: FeedbackRequestLike, ctx: AuthorizedFeedbackContext) => Promise<void>;
   redactFeedback?: (feedback: unknown, ctx: AuthorizedFeedbackContext) => Promise<unknown>;
   resolveIntegrationSecrets?: (ctx: AuthorizedFeedbackContext) => Promise<Record<string, unknown>>;
   errorNormalizer?: (err: unknown, ctx?: AuthorizedFeedbackContext) => unknown;

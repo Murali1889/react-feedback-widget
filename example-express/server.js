@@ -29,6 +29,7 @@ app.use(cookieParser());
 const secureHandler = withSecureDefaults({
   authorize: async (req) => {
     // DEMO ONLY — replace with your real auth.
+    // `req` is the normalized reqLike from withSecureDefaults — see types.d.ts.
     if (req.cookies?.['demo-session'] !== 'ok') throw new FeedbackAuthError();
     return { userId: 'demo-user', projectId: 'DEMO', role: 'developer' };
   },
