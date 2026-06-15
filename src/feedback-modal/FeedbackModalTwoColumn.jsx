@@ -193,18 +193,7 @@ const EvidenceCard = styled.div`
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
               box-shadow 0.25s ease;
 
-  /* Checker pattern background so TRANSPARENT pixels in the captured
-     screenshot read as transparency (Figma / Photoshop convention),
-     not as our modal bleeding through. Two layered gradients form
-     the checker. */
-  background-color: ${p => p.theme.mode === 'dark' ? '#0f172a' : '#ffffff'};
-  background-image:
-    linear-gradient(45deg, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 25%, transparent 25%),
-    linear-gradient(-45deg, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 75%),
-    linear-gradient(-45deg, transparent 75%, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 75%);
-  background-size: 14px 14px;
-  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+  background: ${p => p.theme.mode === 'dark' ? '#0f172a' : '#ffffff'};
 
   /* Layered shadows — depth from multiple light sources */
   box-shadow:

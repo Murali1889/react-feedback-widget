@@ -342,9 +342,25 @@ export const captureElementScreenshot = async (element) => {
 
   // CRITICAL: Force capture of current Viewport ONLY if it's the body.
   // This solves the "capturing off-screen/scrolling" issue.
+  // Walk up from the captured element to find the nearest ancestor with a
+  // non-transparent computed background, falling back to white. This gives
+  // captures of glass / backdrop-filter cards a definite opaque surface
+  // instead of showing whatever was behind on the page.
+  const effectiveBg = (() => {
+    let el = element;
+    while (el && el !== document.body && el !== document.documentElement) {
+      const bg = getComputedStyle(el).backgroundColor;
+      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return bg;
+      el = el.parentElement;
+    }
+    const bodyBg = getComputedStyle(document.body).backgroundColor;
+    if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' && bodyBg !== 'transparent') return bodyBg;
+    return '#ffffff';
+  })();
+
   const captureOptions = {
     scale: SCALE,
-    backgroundColor: null, // Respect transparency
+    backgroundColor: effectiveBg,
     style: {
       transform: 'none',
       opacity: '1',
