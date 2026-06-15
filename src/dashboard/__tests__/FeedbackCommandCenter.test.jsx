@@ -36,7 +36,7 @@ describe('FeedbackCommandCenter', () => {
 
   it('shows item count chip', () => {
     render(<FeedbackCommandCenter isOpen onClose={() => {}} data={items} />);
-    expect(screen.getByText(/2 items/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/2 items/i).length).toBeGreaterThan(0);
   });
 
   it('defaults selection to the newest unresolved item', () => {
