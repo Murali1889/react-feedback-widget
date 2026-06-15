@@ -11,10 +11,19 @@ let workerIdleTimer = null;
 let nextId = 1;
 const pending = new Map();
 
+function getWorkerUrl() {
+  if (typeof globalThis !== 'undefined' && typeof globalThis.__feedbackWorkerUrl === 'string') {
+    return globalThis.__feedbackWorkerUrl;
+  }
+  return null;
+}
+
 function spawn() {
   if (worker) return worker;
+  const url = getWorkerUrl();
+  if (!url || typeof Worker === 'undefined') return null;
   try {
-    worker = new Worker(new URL('./worker/feedback-capture-worker.js', import.meta.url), { type: 'module' });
+    worker = new Worker(url, { type: 'module' });
   } catch {
     worker = null;
     return null;
