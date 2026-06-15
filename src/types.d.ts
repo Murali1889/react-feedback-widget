@@ -104,3 +104,131 @@ export interface FeedbackServerSecurityHooks {
 export type FeedbackServerResponse<T = unknown> =
   | { ok: true; data: T; securityContext: FeedbackSecurityContext }
   | { ok: false; error: FeedbackErrorCode; message?: string; fields?: Record<string, string> };
+
+// =====================================================================
+// React component types (Phase D / T34 — first TS-first slice)
+// =====================================================================
+
+import type { ReactNode, FC } from 'react';
+
+export type FeedbackPriority = 'P0' | 'P1' | 'P2' | 'P3';
+
+export interface FeedbackBuildInfo {
+  commit?: string;
+  branch?: string;
+  builtAt?: string;
+  environment?: string;
+  packageVersion?: string;
+  [key: string]: unknown;
+}
+
+export interface FeedbackCaptureConfig {
+  buildInfo?: FeedbackBuildInfo;
+  flagsSnapshot?: () => Record<string, unknown> | Promise<Record<string, unknown>>;
+  sensitiveSelectors?: string[];
+  interactionBufferSize?: number;
+  networkBufferSize?: number;
+  networkExcludePatterns?: string[];
+  disableNetworkCapture?: boolean;
+}
+
+export interface FeedbackNetworkEntry {
+  type: 'fetch' | 'xhr';
+  method: string;
+  url: string;
+  origin: string | null;
+  status: number | null;
+  ok: boolean | null;
+  duration: number;
+  error?: string;
+  ts: number;
+}
+
+export interface FeedbackPayload {
+  feedback: string;
+  type: FeedbackType;
+  severity?: FeedbackPriority | FeedbackSeverity;
+  labels?: string[];
+  screenshot?: string | null;
+  videoBlob?: Blob | null;
+  attachment?: File | null;
+  eventLogs?: unknown[];
+  timestamp: string;
+  url: string;
+  component?: string;
+  elementInfo?: unknown;
+  userAgent: string;
+  viewport: { width: number; height: number };
+  userName: string;
+  userEmail?: string | null;
+  userAvatar?: string | null;
+  selectedIntegrations?: { local?: boolean; jira?: boolean; sheets?: boolean };
+  dotPosition?: { x: number; y: number } | null;
+  aiTicket?: {
+    markdown: string;
+    json: Record<string, unknown>;
+    assembledOn: 'worker' | 'main';
+  };
+}
+
+export interface SimpleFeedbackButtonProps {
+  /** Required: handler invoked with the assembled FeedbackPayload on submit. */
+  onSubmit: (payload: FeedbackPayload) => void | Promise<void>;
+  /** Reporter display name. Default 'Anonymous'. */
+  userName?: string;
+  /** Reporter email — improves Jira/ticket attribution. */
+  userEmail?: string | null;
+  /** Trigger button position. Default 'bottom-right'. */
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  /** Optional build metadata threaded into the AI ticket. */
+  buildInfo?: FeedbackBuildInfo;
+  /** Optional feature-flag snapshot function — invoked at submit time. */
+  flagsSnapshot?: () => Record<string, unknown> | Promise<Record<string, unknown>>;
+  children?: ReactNode;
+}
+
+export interface FeedbackProviderProps {
+  onSubmit?: (payload: FeedbackPayload) => void | Promise<void>;
+  onStatusChange?: (input: { id: string; status: string; comment?: string }) => void | Promise<void>;
+  dashboard?: boolean;
+  isDeveloper?: boolean;
+  userName?: string;
+  userEmail?: string | null;
+  userAvatar?: string | null;
+  mode?: 'light' | 'dark';
+  auth?: FeedbackAuthConfig;
+  redact?: 'default' | 'strict' | 'off' | FeedbackRedactionConfig;
+  captureConfig?: FeedbackCaptureConfig;
+  integrations?: {
+    jira?: Record<string, unknown>;
+    sheets?: Record<string, unknown>;
+  };
+  onIntegrationSuccess?: (type: string, result: unknown) => void;
+  onIntegrationError?: (type: string, error: unknown) => void;
+  children?: ReactNode;
+}
+
+export const SimpleFeedbackButton: FC<SimpleFeedbackButtonProps>;
+export const FeedbackProvider: FC<FeedbackProviderProps>;
+
+// Framework-agnostic capture/core surface
+export interface RingBuffer<T> {
+  push(item: T): void;
+  snapshot(): T[];
+  size(): number;
+  capacity(): number;
+  clear(): void;
+}
+
+export function createRingBuffer<T = unknown>(capacity?: number): RingBuffer<T>;
+export function mountInteractionObserver(
+  buffer: RingBuffer<unknown>,
+  opts?: { sensitiveSelectors?: string[] }
+): () => void;
+export function mountNetworkObserver(
+  buffer: RingBuffer<FeedbackNetworkEntry>,
+  opts?: { excludePatterns?: string[] }
+): () => void;
+export function mountRouteObserver(buffer: RingBuffer<unknown>): () => void;
+export function mountErrorObserver(buffer: RingBuffer<unknown>): () => void;
+
