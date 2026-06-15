@@ -164,23 +164,82 @@ function fmtMarkdown(json) {
   ].filter(Boolean).join('\n');
 }
 
+function fmtAnnotations(annotations) {
+  if (!annotations || !annotations.length) return '';
+  return [
+    '',
+    '## Annotations',
+    ...annotations.map((a) => `${a.index}. \`(${a.xPct.toFixed(1)}%, ${a.yPct.toFixed(1)}%)\` — ${a.note}`),
+  ].join('\n');
+}
+
+function fmtImpact(impact) {
+  if (!impact || !impact.primary) return '';
+  const grouped = {};
+  for (const r of (impact.related || [])) {
+    if (!grouped[r.kind]) grouped[r.kind] = [];
+    grouped[r.kind].push(r);
+  }
+  const kindHeadings = {
+    importer: 'Files that import this',
+    imports:  'Files this imports',
+    test:     'Test files',
+    sibling:  'Sibling files',
+    parent:   'Parent / barrel',
+  };
+  const sections = Object.keys(grouped).map((k) => [
+    `### ${kindHeadings[k] || k}`,
+    ...grouped[k].map((r) => `- \`${r.label}\` — ${r.reason}`),
+  ].join('\n'));
+  if (!sections.length) return '';
+  return [
+    '',
+    '## Likely Related Files',
+    `*Primary:* \`${impact.primary}\` · *Source:* ${impact.source}`,
+    '',
+    ...sections,
+  ].join('\n');
+}
+
+function fmtSuggestedTest(test) {
+  if (!test) return '';
+  return [
+    '',
+    '## Suggested Failing Test',
+    '```js',
+    test,
+    '```',
+  ].join('\n');
+}
+
 export function assembleTicket(input) {
+  const item = input.item || {};
   const json = {
     schemaVersion: '1.0',
     summary: summarize(input),
     where: whereFrom(input),
     state: serializeFiberTree(input.fiberSnapshot || {}),
     repro: { steps: reproSteps(input), format: 'v1' },
-    logs: logsSummary(input.item || {}, input.errors || [], input.network || []),
+    logs: logsSummary(item, input.errors || [], input.network || []),
     environment: environment(input),
     evidence: {
-      hasScreenshot: !!input.item?.screenshot,
-      hasVideo: !!input.item?.video,
-      eventCount: (input.item?.eventLogs || []).length,
+      hasScreenshot: !!item.screenshot,
+      hasVideo: !!item.video,
+      eventCount: (item.eventLogs || []).length,
+      annotations: item.annotations || [],
     },
+    impact: item.impact || null,
+    suggestedTest: item.suggestedTest || null,
   };
+  const baseMarkdown = fmtMarkdown(json);
+  const markdown = [
+    baseMarkdown,
+    fmtAnnotations(json.evidence.annotations),
+    fmtImpact(json.impact),
+    fmtSuggestedTest(json.suggestedTest),
+  ].filter(Boolean).join('\n');
   return {
-    markdown: fmtMarkdown(json),
+    markdown,
     json,
     generatedAt: new Date().toISOString(),
   };

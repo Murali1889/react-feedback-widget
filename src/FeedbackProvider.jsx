@@ -14,6 +14,7 @@ import { FeedbackModalDrawer } from './feedback-modal/FeedbackModalDrawer.jsx';
 import { FeedbackModalCompact } from './feedback-modal/FeedbackModalCompact.jsx';
 import { FeedbackModalStepper } from './feedback-modal/FeedbackModalStepper.jsx';
 import { FeedbackModalTwoColumn } from './feedback-modal/FeedbackModalTwoColumn.jsx';
+import { FeedbackModalWorkspace } from './feedback-modal/FeedbackModalWorkspace.jsx';
 
 const MODAL_VARIANTS = {
   centered: FeedbackModal,
@@ -21,6 +22,7 @@ const MODAL_VARIANTS = {
   compact: FeedbackModalCompact,
   stepper: FeedbackModalStepper,
   'two-column': FeedbackModalTwoColumn,
+  workspace: FeedbackModalWorkspace,
 };
 import { FeedbackDashboard, saveFeedbackToLocalStorage } from './FeedbackDashboard.jsx';
 import { CanvasOverlay } from './CanvasOverlay.jsx';

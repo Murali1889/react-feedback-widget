@@ -13,7 +13,7 @@ interface FeedbackProviderWrapperProps {
   children: ReactNode
 }
 
-type ModalVariant = 'centered' | 'drawer' | 'compact' | 'stepper' | 'two-column'
+type ModalVariant = 'centered' | 'drawer' | 'compact' | 'stepper' | 'two-column' | 'workspace'
 
 export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperProps) {
   const [integrationType, setIntegrationType] = useState<'server' | 'apps-script' | 'zapier'>('server')
@@ -114,6 +114,7 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
               width: '100%',
             }}
           >
+            <option value="workspace">⭐ Workspace (rail + impact map + pins)</option>
             <option value="centered">Centered modal (default)</option>
             <option value="drawer">Drawer (slide from right)</option>
             <option value="compact">Compact card (bottom-right)</option>
