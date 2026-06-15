@@ -64,13 +64,25 @@ function whereFrom(input) {
   };
 }
 
-function logsSummary(item, errors) {
+function logsSummary(item, errors, network) {
   const out = [];
   for (const e of (item.eventLogs || [])) {
     if (e.type === 'console') out.push({ type: 'console', level: e.level, message: e.message, ts: e.timestamp });
     if (e.type === 'network' && (e.status === undefined || e.status >= 400 || e.status === 'failed')) {
       out.push({ type: 'network', method: e.method, url: e.url, status: e.status, ts: e.timestamp });
     }
+  }
+  for (const n of network || []) {
+    out.push({
+      type: 'network',
+      method: n.method,
+      url: n.url,
+      status: n.status,
+      ok: n.ok,
+      duration: n.duration,
+      error: n.error,
+      ts: n.ts,
+    });
   }
   for (const e of errors || []) out.push({ type: 'error', message: e.message, ts: e.ts });
   return out;
@@ -159,7 +171,7 @@ export function assembleTicket(input) {
     where: whereFrom(input),
     state: serializeFiberTree(input.fiberSnapshot || {}),
     repro: { steps: reproSteps(input), format: 'v1' },
-    logs: logsSummary(input.item || {}, input.errors || []),
+    logs: logsSummary(input.item || {}, input.errors || [], input.network || []),
     environment: environment(input),
     evidence: {
       hasScreenshot: !!input.item?.screenshot,

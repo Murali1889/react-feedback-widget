@@ -3,6 +3,7 @@ import {
   redactInteractionTrail,
   redactFiberSnapshot,
   redactBuildInfo,
+  redactNetworkEntries,
   resolveRedactionConfig,
 } from '../lib/feedbackSecurity.js';
 
@@ -59,6 +60,7 @@ export function runViaWorker(input) {
       interactions: input.interactions || [],
       errors: input.errors || [],
       routes: input.routes || [],
+      network: input.network || [],
       fiberSnapshot: input.fiberSnapshot || {},
       buildInfo: input.buildInfo || {},
       flags: input.flags || {},
@@ -75,6 +77,7 @@ export async function runOnMainThread(input) {
     interactions: redactInteractionTrail(input.interactions || [], cfg),
     errors: input.errors || [],
     routes: input.routes || [],
+    network: redactNetworkEntries(input.network || [], cfg),
     fiberSnapshot: redactFiberSnapshot(input.fiberSnapshot || {}, cfg),
     buildInfo: redactBuildInfo(input.buildInfo || {}, cfg),
     flags: input.flags || {},

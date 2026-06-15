@@ -4,6 +4,7 @@ import {
   redactInteractionTrail,
   redactFiberSnapshot,
   redactBuildInfo,
+  redactNetworkEntries,
   resolveRedactionConfig,
 } from '../../lib/feedbackSecurity.js';
 
@@ -20,6 +21,7 @@ self.addEventListener('message', async (e) => {
       interactions: redactInteractionTrail(msg.interactions || [], cfg),
       errors: msg.errors || [],
       routes: msg.routes || [],
+      network: redactNetworkEntries(msg.network || [], cfg),
       fiberSnapshot: redactFiberSnapshot(msg.fiberSnapshot || {}, cfg),
       buildInfo: redactBuildInfo(msg.buildInfo || {}, cfg),
       flags: msg.flags || {},

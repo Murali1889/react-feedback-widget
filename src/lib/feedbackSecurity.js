@@ -404,6 +404,16 @@ export function redactFiberSnapshot(tree, cfg) {
   return out;
 }
 
+export function redactNetworkEntries(entries, cfg) {
+  if (!Array.isArray(entries)) return [];
+  return entries.map((entry) => {
+    if (!entry || typeof entry !== 'object') return entry;
+    const out = { ...entry };
+    if (typeof out.url === 'string') out.url = redactUrl(out.url, cfg);
+    return out;
+  });
+}
+
 const BUILD_INFO_SENSITIVE = /token|secret|apikey|api_key|password|credential/i;
 
 export function redactBuildInfo(info, _cfg) {

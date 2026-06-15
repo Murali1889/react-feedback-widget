@@ -706,6 +706,7 @@ export const FeedbackProvider = ({
             interactions: captureRef.current.getInteractions(),
             errors: captureRef.current.getErrors(),
             routes: captureRef.current.getRoutes(),
+            network: typeof captureRef.current.getNetwork === 'function' ? captureRef.current.getNetwork() : [],
             fiberSnapshot: processedData.elementInfo?.fiberSnapshot || {},
             buildInfo: captureRef.current.getBuildInfo(),
             flags: await captureRef.current.getFlags(),
