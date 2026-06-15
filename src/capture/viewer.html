@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feedback · Command Center</title>
+  <style>
+    html, body, #root { height: 100%; margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; background: #fcfcfa; color: #1c1917; }
+    .splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #57534e; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="root"><div class="splash">Loading Command Center…</div></div>
+
+  <!-- React + styled-components from a CDN; works on any modern browser. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18",
+        "react-dom": "https://esm.sh/react-dom@18",
+        "react-dom/client": "https://esm.sh/react-dom@18/client",
+        "styled-components": "https://esm.sh/styled-components@6?bundle"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { FeedbackCommandCenter } from './dashboard/index.esm.js';
+
+    // Read whatever the widget has been writing to this browser's localStorage.
+    // Default key matches the widget's default.
+    const LS_KEY = (new URLSearchParams(location.search)).get('key') || 'react-feedback-data';
+    function loadLocal() {
+      try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+      catch { return []; }
+    }
+
+    function App() {
+      const [items, setItems] = React.useState(loadLocal());
+      // Live refresh: re-read on focus and on storage events (other tabs).
+      React.useEffect(() => {
+        const onFocus = () => setItems(loadLocal());
+        const onStorage = (e) => { if (!e.key || e.key === LS_KEY) setItems(loadLocal()); };
+        window.addEventListener('focus', onFocus);
+        window.addEventListener('storage', onStorage);
+        return () => {
+          window.removeEventListener('focus', onFocus);
+          window.removeEventListener('storage', onStorage);
+        };
+      }, []);
+      return React.createElement(FeedbackCommandCenter, {
+        isOpen: true,
+        onClose: () => { /* always-on viewer */ },
+        data: items,
+        isDeveloper: true,
+        mode: (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+        onStatusChange: (id, next) => {
+          const updated = items.map((it) => it.id === id ? { ...it, status: next } : it);
+          localStorage.setItem(LS_KEY, JSON.stringify(updated));
+          setItems(updated);
+        },
+        onDelete: (id) => {
+          const updated = items.filter((it) => it.id !== id);
+          localStorage.setItem(LS_KEY, JSON.stringify(updated));
+          setItems(updated);
+        },
+      });
+    }
+
+    createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>

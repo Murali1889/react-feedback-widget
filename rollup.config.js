@@ -180,7 +180,16 @@ export default [
     input: 'src/capture/worker/feedback-capture-worker.js',
     output: { file: 'dist/capture/worker.js', format: 'esm', sourcemap: true },
     onwarn,
-    plugins: clientPlugins,
+    plugins: [
+      ...clientPlugins,
+      {
+        name: 'copy-viewer-html',
+        writeBundle() {
+          fs.mkdirSync('dist', { recursive: true });
+          fs.copyFileSync('src/capture/viewer.html', 'dist/viewer.html');
+        },
+      },
+    ],
     external: [],
   },
 ];
