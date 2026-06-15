@@ -13,7 +13,14 @@
 
 ### Compatibility
 - No breaking changes. The legacy color key list is enforced by a backcompat test snapshot.
-- `StatusBadge` and `StatusDropdown` keep their existing implementation and `{status, statuses}` API (refresh deferred to Phase B2 where they can be rebuilt against the Command Center data flow).
+- `StatusBadge` and `StatusDropdown` keep their existing implementation and `{status, statuses}` API; the Command Center introduces a separate internal `WorkflowStatusControl` rather than touching them.
+
+### Added — Phase B2 (Command Center)
+- **Command Center workspace.** Wider three-pane shell (Triage list · Evidence Stack · Workflow Panel) replaces the internals of `FeedbackDashboard` while keeping every public export byte-compatible. Card-with-thumbnail triage rows, collapsible Evidence Stack with always-visible section summaries, full Workflow Panel (status, severity, owner, customer, integrations, copy-as handoff, danger zone with inline confirm), Summary Bar with status counts + needs-attention shortcuts as one-click filters.
+- New `react-visual-feedback/dashboard` subpath export with `FeedbackCommandCenter`, hooks (`useFeedbackStore`, `useSectionState`, `useKeyboardShortcuts`, `useSelection`, `useCommandCenter`), and pure helpers (`getFilteredItems`, `getStatusCounts`, `getAttentionCounts`).
+- Optional `dataSource={{ load, save, remove, subscribe }}` prop for async / server-driven data sources alongside the existing `data` and localStorage modes.
+- Keyboard shortcuts: `Esc` close, `/` focus search, `j`/`k` next/prev item.
+- 94 additional tests including a Command-Center-level axe-core gate.
 
 ## [2.3.0] — 2026-06-15
 

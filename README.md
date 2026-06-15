@@ -56,6 +56,29 @@ palette. The widget's existing dashboard, modal, and dots automatically
 inherit the same palette via the legacy `theme.js` keys, so no other
 code change is required.
 
+## Command Center (v2.3+)
+
+Phase B2 ships the Command Center: a wider three-pane workspace
+(Triage list · Evidence Stack · Workflow Panel) that replaces the
+internals of `FeedbackDashboard`. Existing consumers don't need any
+code change — `<FeedbackProvider dashboard={true}>` continues to
+work and now opens the Command Center.
+
+Direct import:
+
+```js
+import { FeedbackCommandCenter } from 'react-visual-feedback/dashboard';
+```
+
+The Command Center accepts the same prop shape as
+`FeedbackDashboard` plus optional Phase A fields:
+`onSeverityChange`, `onOwnerChange`, `onCustomerValueChange`,
+`onIntegrationRetry`, `onDelete`, and an async `dataSource={{ load,
+save, remove, subscribe }}` for hosts that want server-driven data
+instead of localStorage.
+
+Keyboard: `Esc` close · `/` focus search · `j` / `k` next-prev item.
+
 ## Features
 
 ### Feedback Collection
