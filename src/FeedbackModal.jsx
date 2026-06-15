@@ -319,6 +319,15 @@ const FEEDBACK_TYPES = [
   { id: 'other', label: 'Other' },
 ];
 
+const PRIORITY_OPTIONS = [
+  { id: 'P0', label: 'P0', hint: 'Critical' },
+  { id: 'P1', label: 'P1', hint: 'High' },
+  { id: 'P2', label: 'P2', hint: 'Medium' },
+  { id: 'P3', label: 'P3', hint: 'Low' },
+];
+
+const DEFAULT_SUGGESTED_LABELS = ['ui', 'a11y', 'perf', 'data', 'flow'];
+
 export const FeedbackModal = ({
   isOpen,
   onClose,
@@ -336,6 +345,8 @@ export const FeedbackModal = ({
   clickPosition
 }) => {
   const [feedbackType, setFeedbackType] = useState('bug');
+  const [priority, setPriority] = useState('P2');
+  const [labels, setLabels] = useState([]);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [manualScreenshot, setManualScreenshot] = useState(null);
@@ -377,6 +388,8 @@ export const FeedbackModal = ({
   useEffect(() => {
     if (isOpen) {
       setFeedbackType('bug');
+      setPriority('P2');
+      setLabels([]);
       setDescription('');
       setIsSubmitting(false);
       setManualScreenshot(null);
@@ -390,6 +403,10 @@ export const FeedbackModal = ({
       setTimeout(() => descriptionRef.current?.focus(), 150);
     }
   }, [isOpen]);
+
+  const toggleLabel = (label) => {
+    setLabels((prev) => prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]);
+  };
 
   const handleFile = (file) => {
     if (!file) return;
@@ -414,6 +431,8 @@ export const FeedbackModal = ({
     const feedbackData = {
       feedback: description.trim(),
       type: feedbackType,
+      severity: priority,
+      labels,
       screenshot: screenshot || manualScreenshot,
       videoBlob: videoBlob || manualVideo,
       attachment: manualFile,
@@ -510,11 +529,11 @@ export const FeedbackModal = ({
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500 }}>Category:</span>
+               <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500 }}>Category</span>
                <TypeSelector>
                   {FEEDBACK_TYPES.map(type => (
-                    <TypePill 
-                      key={type.id} 
+                    <TypePill
+                      key={type.id}
                       $active={feedbackType === type.id}
                       onClick={() => setFeedbackType(type.id)}
                     >
@@ -522,6 +541,37 @@ export const FeedbackModal = ({
                     </TypePill>
                   ))}
                </TypeSelector>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500 }}>Priority</span>
+              <TypeSelector>
+                {PRIORITY_OPTIONS.map(opt => (
+                  <TypePill
+                    key={opt.id}
+                    $active={priority === opt.id}
+                    onClick={() => setPriority(opt.id)}
+                    title={opt.hint}
+                  >
+                    {opt.label}
+                  </TypePill>
+                ))}
+              </TypeSelector>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500, paddingTop: 6 }}>Labels</span>
+              <TypeSelector>
+                {DEFAULT_SUGGESTED_LABELS.map(label => (
+                  <TypePill
+                    key={label}
+                    $active={labels.includes(label)}
+                    onClick={() => toggleLabel(label)}
+                  >
+                    {label}
+                  </TypePill>
+                ))}
+              </TypeSelector>
             </div>
         </ModalBody>
 
