@@ -31,7 +31,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm test && npm run build"
   },
   "keywords": [
     "react",
@@ -81,6 +85,7 @@
     "react-dom": "^18.2.0",
     "rollup": "^4.9.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
-    "styled-components": "^6.1.19"
+    "styled-components": "^6.1.19",
+    "vitest": "^1.6.1"
   }
 }
