@@ -1,0 +1,22 @@
+[
+  "overlayBg", "backdropBg", "modalBg", "modalBorder",
+  "textPrimary", "textSecondary", "textTertiary",
+  "border", "borderFocus",
+  "inputBg", "inputDisabledBg",
+  "btnCancelBg", "btnCancelHover", "btnCancelText",
+  "btnPrimaryBg", "btnPrimaryHover", "btnPrimaryText",
+  "btnDisabledBg",
+  "highlightBorder", "highlightBg", "highlightShadow",
+  "tooltipBg", "tooltipText",
+  "errorBg", "errorBorder", "errorText",
+  "screenshotBorder", "screenshotBg",
+  "shadow",
+  "closeHoverBg", "hoverBg",
+  "cardBg", "headerBg", "contentBg",
+  "dotBorder",
+  "dotPopoverBg", "dotPopoverBorder", "dotPopoverShadow",
+  "dotMiniCardBg", "dotMiniCardBorder", "dotMiniCardShadow",
+  "dotToolbarBg", "dotToolbarBorder", "dotToolbarShadow",
+  "dotClusterBg", "dotClusterText",
+  "dotFocusRing"
+]
