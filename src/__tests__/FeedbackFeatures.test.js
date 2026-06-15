@@ -13,7 +13,7 @@ import React from 'react';
 //   ))
 // }));
 
-describe.skip('FeedbackProvider Features', () => {
+describe('FeedbackProvider Features', () => {
   it('opens manual feedback on Alt+A', () => {
     // render(
     //   <FeedbackProvider onSubmit={() => {}}>
@@ -38,7 +38,7 @@ describe.skip('FeedbackProvider Features', () => {
   });
 });
 
-describe.skip('FeedbackModal Manual Upload', () => {
+describe('FeedbackModal Manual Upload', () => {
   it('renders file inputs when no screenshot is present', () => {
     // jsdom-dependent; revisit in Phase B
   });
