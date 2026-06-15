@@ -123,6 +123,10 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
         integrations={getIntegrationConfig()}
         onIntegrationSuccess={handleIntegrationSuccess}
         onIntegrationError={handleIntegrationError}
+        // Phase A: secure-by-default. Session auth uses same-site cookies
+        // plus automatic CSRF discovery. Server enforces every request.
+        auth={{ mode: 'session' }}
+        redact="default"
       >
         {children}
       </FeedbackProvider>
