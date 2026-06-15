@@ -189,10 +189,22 @@ const EvidenceCard = styled.div`
   position: relative;
   border-radius: 16px;
   overflow: hidden;
-  background: ${p => p.theme.mode === 'dark' ? '#0f172a' : '#ffffff'};
   cursor: zoom-in;
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
               box-shadow 0.25s ease;
+
+  /* Checker pattern background so TRANSPARENT pixels in the captured
+     screenshot read as transparency (Figma / Photoshop convention),
+     not as our modal bleeding through. Two layered gradients form
+     the checker. */
+  background-color: ${p => p.theme.mode === 'dark' ? '#0f172a' : '#ffffff'};
+  background-image:
+    linear-gradient(45deg, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 25%, transparent 25%),
+    linear-gradient(-45deg, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 75%),
+    linear-gradient(-45deg, transparent 75%, ${p => p.theme.mode === 'dark' ? '#1e293b' : '#f1f5f9'} 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
 
   /* Layered shadows — depth from multiple light sources */
   box-shadow:
@@ -216,15 +228,16 @@ const EvidenceCard = styled.div`
     mask-composite: exclude;
     -webkit-mask-composite: xor;
     pointer-events: none;
+    z-index: 2;
   }
 
-  /* Inner highlight stripe */
+  /* Inner hairline border framing the image area */
   &::after {
     content: '';
     position: absolute;
-    inset: 1px;
-    border-radius: 15px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.06), transparent 30%);
+    inset: 6px;
+    border-radius: 11px;
+    border: 1px solid ${p => p.theme.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)'};
     pointer-events: none;
     z-index: 1;
   }
@@ -244,6 +257,9 @@ const EvidenceCard = styled.div`
     object-fit: contain;
     position: relative;
     z-index: 0;
+    /* Lift the image slightly off the checker edge */
+    padding: 6px;
+    box-sizing: border-box;
   }
 `;
 
