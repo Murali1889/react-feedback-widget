@@ -56,6 +56,11 @@
     "./integrations": {
       "import": "./dist/integrations/index.js",
       "require": "./dist/integrations/index.js"
+    },
+    "./destinations": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/destinations/index.esm.js",
+      "require": "./dist/destinations/index.js"
     }
   },
   "files": [

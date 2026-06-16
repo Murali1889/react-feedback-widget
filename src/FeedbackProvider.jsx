@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import styled, { ThemeProvider } from 'styled-components';
+import { dispatchToDestinations } from './destinations/registry.js';
 import { FeedbackModal } from './FeedbackModal.jsx';
 import { FeedbackModalDrawer } from './feedback-modal/FeedbackModalDrawer.jsx';
 import { FeedbackModalCompact } from './feedback-modal/FeedbackModalCompact.jsx';
@@ -308,6 +309,13 @@ export const FeedbackProvider = ({
   redact = 'default',    // 'default' | 'strict' | 'off' | FeedbackRedactionConfig
   // Phase D: pick which dialog layout to render. 'centered' = original; 'drawer' | 'compact' | 'stepper' | 'two-column' are alternative structures.
   modalVariant = 'centered',
+  // Phase E: array of destinations to fan a submission out to in parallel.
+  // Each destination is an adapter from 'react-visual-feedback/destinations'
+  // (local, supabasePublic, githubIssue, linearIssue, notionDb, webhook, cloud, ...).
+  // The legacy `integrations={jira:..., sheets:...}` prop continues to work
+  // and is dispatched alongside `destinations`.
+  destinations,
+  onDestinationResults,
 }) => {
   // Stable refs for auth/redact so we can read latest values from callbacks.
   const authRef = useRef(auth);
@@ -743,6 +751,23 @@ export const FeedbackProvider = ({
       const shouldSendToJira = integrationClientRef.current && integrations?.jira?.enabled && selectedIntegrations.jira;
       const shouldSendToSheets = integrationClientRef.current && integrations?.sheets?.enabled && selectedIntegrations.sheets;
 
+      // Fan out to the new destinations array in parallel — runs alongside
+      // the legacy integrations path. Each destination resolves with
+      // {ok, id?, url?, error?, durationMs} so the UI can surface
+      // per-destination status in the modal footer / submission queue.
+      if (Array.isArray(destinations) && destinations.length > 0) {
+        try {
+          const { results } = await dispatchToDestinations(destinations, processedData);
+          if (typeof onDestinationResults === 'function') {
+            try { onDestinationResults(results); } catch { /* swallow */ }
+          }
+          processedData.destinationResults = results;
+        } catch (e) {
+          // dispatchToDestinations never throws, but guard anyway.
+          console.warn('destinations dispatch error:', e?.message);
+        }
+      }
+
       if (shouldSendToJira || shouldSendToSheets) {
         try {
           const integrationResults = await integrationClientRef.current.sendFeedback(processedData, {
@@ -797,7 +822,7 @@ export const FeedbackProvider = ({
           dispatch({ type: 'REMOVE_SUBMISSION', payload: submissionId });
         }, 5000);
       });
-  }, [onSubmit, dashboard, setIsActive, integrations, generateSubmissionId]);
+  }, [onSubmit, dashboard, setIsActive, integrations, generateSubmissionId, destinations, onDestinationResults]);
 
   // Handler to dismiss a submission from the queue
   const handleDismissSubmission = useCallback((submissionId) => {

@@ -112,6 +112,17 @@ export default [
     plugins: clientPlugins,
     external: ['react', 'react-dom', 'styled-components'],
   },
+  // Destinations adapter system (Phase E)
+  {
+    input: 'src/destinations/index.js',
+    output: [
+      { file: 'dist/destinations/index.js',     format: 'cjs', sourcemap: true },
+      { file: 'dist/destinations/index.esm.js', format: 'esm', sourcemap: true },
+    ],
+    onwarn,
+    plugins: clientPlugins,
+    external: ['react', 'react-dom', 'styled-components'],
+  },
   // Config (shared)
   {
     input: 'src/integrations/config.js',
