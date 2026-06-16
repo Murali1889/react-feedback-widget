@@ -53,6 +53,26 @@
       "import": "./dist/server/sheets.js",
       "require": "./dist/server/sheets.js"
     },
+    "./server/github": {
+      "import": "./dist/server/github.js",
+      "require": "./dist/server/github.js"
+    },
+    "./server/linear": {
+      "import": "./dist/server/linear.js",
+      "require": "./dist/server/linear.js"
+    },
+    "./server/notion": {
+      "import": "./dist/server/notion.js",
+      "require": "./dist/server/notion.js"
+    },
+    "./server/supabase": {
+      "import": "./dist/server/supabase.js",
+      "require": "./dist/server/supabase.js"
+    },
+    "./server/webhook": {
+      "import": "./dist/server/webhook.js",
+      "require": "./dist/server/webhook.js"
+    },
     "./integrations": {
       "import": "./dist/integrations/index.js",
       "require": "./dist/integrations/index.js"

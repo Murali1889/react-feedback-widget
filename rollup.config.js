@@ -100,6 +100,18 @@ export default [
     plugins: serverPlugins,
     external: ['crypto'],
   },
+  // Phase E destination server handlers
+  ...['github', 'linear', 'notion', 'supabase', 'webhook'].map((name) => ({
+    input: `src/integrations/server/${name}.js`,
+    output: {
+      file: `dist/server/${name}.js`,
+      format: 'esm',
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: serverPlugins,
+    external: ['crypto', 'node:crypto'],
+  })),
   // Client integrations
   {
     input: 'src/integrations/index.js',

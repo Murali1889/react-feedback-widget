@@ -69,6 +69,30 @@ export {
 } from '../sheets.js';
 
 // ============================================
+// PHASE E DESTINATION HANDLERS
+// ============================================
+//
+// Server-side counterparts to the client adapters in
+// react-visual-feedback/destinations. Each pairs with one client
+// adapter:
+//
+//   client adapter (browser)        server handler (api route)
+//   ─────────────────────────       ─────────────────────────────
+//   githubIssue({ endpoint })   ⇄   createGithubHandler({})
+//   linearIssue({ endpoint })   ⇄   createLinearHandler({})
+//   notionDb({ endpoint })      ⇄   createNotionHandler({})
+//   supabaseProxied({ endpoint })⇄  createSupabaseHandler({})
+//   webhookProxied({ endpoint })⇄   createWebhookHandler({})
+//
+// Always wrap with withSecureDefaults({ authorize }).
+
+export { createGithubHandler } from './github.js';
+export { createLinearHandler } from './linear.js';
+export { createNotionHandler } from './notion.js';
+export { createSupabaseHandler } from './supabase.js';
+export { createWebhookHandler } from './webhook.js';
+
+// ============================================
 // CONFIG EXPORTS
 // ============================================
 
