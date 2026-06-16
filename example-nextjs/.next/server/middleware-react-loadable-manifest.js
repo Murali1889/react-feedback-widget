@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"app/providers.tsx -> react-visual-feedback\":{\"id\":\"app/providers.tsx -> react-visual-feedback\",\"files\":[\"static/chunks/_app-pages-browser_dist_index_esm_js.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{\"app/providers.tsx -> react-visual-feedback\":{\"id\":\"app/providers.tsx -> react-visual-feedback\",\"files\":[]}}"

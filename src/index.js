@@ -39,3 +39,10 @@ export {
 
 // Export Apps Script template generator
 export { getAppsScriptTemplate } from './integrations/sheets';
+
+// Phase F: shared config helper + Phase H: connect namespace
+// One-line discoverable destination API:
+//   import { defineConfig, connect } from 'react-visual-feedback'
+//   connect.github({ repo }) · connect.hubspot() · connect.slack({ channel })
+export { defineConfig } from './config.js';
+export { connect } from './destinations/connect.js';

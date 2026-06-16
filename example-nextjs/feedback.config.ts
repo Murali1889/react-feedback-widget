@@ -2,40 +2,29 @@
  * Single source of truth for the feedback widget.
  *
  * Both the browser (`<FeedbackProvider {...feedbackConfig} />`) and
- * the server (`createFeedbackRouter(feedbackConfig)`) import this
- * file. Adapter constructors carry only public metadata (repo names,
- * team ids, endpoint paths); private tokens live in server env and
- * are only ever read inside the createXHandler factories the router
- * pairs them with.
+ * the server (`createFeedbackHandler(feedbackConfig)`) import this file.
  *
- * To add a destination:
- *   1. Import the client adapter from 'react-visual-feedback/destinations'
- *   2. Add it to the destinations array below
- *   3. Set the server env var(s) listed in that adapter's JSDoc
+ * Adapter constructors carry only public metadata (repo names, team
+ * IDs, endpoint paths). Private tokens live in server env and are
+ * only read by the per-destination server handlers.
  *
- * That's it — no route file to add. The catch-all router at
+ * To add a destination: add one line. The catch-all router at
  * app/api/feedback/[...rest]/route.ts dispatches automatically.
  */
-import { defineConfig } from 'react-visual-feedback/config'
-import {
-  local,
-  githubIssue,
-  linearIssue,
-  notionDb,
-  supabaseProxied,
-} from 'react-visual-feedback/destinations'
+import { defineConfig, connect } from 'react-visual-feedback'
 
 const feedbackConfig = defineConfig({
   destinations: [
-    // Browser-only — always safe, always included for offline + speed.
-    local(),
+    // Browser-only — always safe, always included.
+    connect.local(),
 
     // Server-proxied. Tokens live in server env, never in browser.
-    // Comment in / out depending on which destinations your project uses.
-    githubIssue(),    // env: GH_TOKEN, GH_REPO
-    linearIssue(),    // env: LINEAR_API_KEY, LINEAR_TEAM_ID
-    notionDb(),       // env: NOTION_TOKEN, NOTION_DB_ID
-    supabaseProxied(),// env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+    connect.github({ repo: 'acme/web' }),  // env: GITHUB_TOKEN
+    connect.linear({ team: 'team-id' }),   // env: LINEAR_API_KEY, LINEAR_TEAM_ID
+    connect.notion({ database: 'db-id' }), // env: NOTION_TOKEN, NOTION_DB_ID
+    connect.supabase(),                    // env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+    connect.hubspot(),                     // env: HUBSPOT_TOKEN
+    connect.slack({ channel: '#bugs' }),   // env: SLACK_WEBHOOK_URL or SLACK_BOT_TOKEN+SLACK_CHANNEL
   ],
   auth:   { mode: 'session' },
   redact: 'default',

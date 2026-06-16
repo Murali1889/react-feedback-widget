@@ -18,19 +18,20 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   WEBHOOK_URL (and optionally WEBHOOK_HMAC_SECRET)
  */
-import { createFeedbackRouter, FeedbackAuthError } from 'react-visual-feedback/server'
+import { createFeedbackHandler } from 'react-visual-feedback/server'
 import feedbackConfig from '../../../../../feedback.config'
 import { getDemoSession } from '@/lib/feedback-auth'
 
-export const POST = createFeedbackRouter({
+export const POST = createFeedbackHandler({
   ...feedbackConfig,
   authorize: async (req: any) => {
     const session = await getDemoSession(req)
-    if (!session) throw new FeedbackAuthError()
-    return {
+    // createFeedbackHandler converts null/undefined → 401 automatically,
+    // so we don't need to throw FeedbackAuthError ourselves.
+    return session ? {
       userId: session.userId,
       projectId: session.projectId,
       role: session.role,
-    }
+    } : null
   },
 })
