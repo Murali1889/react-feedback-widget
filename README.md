@@ -1,6 +1,6 @@
 # React Visual Feedback
 
-**[Live Demo](https://react-library-demo-rosy.vercel.app/)** · **[Integration Guide](./docs/INTEGRATION.md)** · **[Architecture Diagram](./docs/architecture.html)** · **[AI Agent Guide](./AGENTS.md)**
+**[Live Demo](https://react-library-demo-rosy.vercel.app/)** · **[Quickstart](./docs/QUICKSTART.md)** · **[Integration Guide](./docs/INTEGRATION.md)** · **[Architecture Diagram](./docs/architecture.html)** · **[AI Agent Guide](./AGENTS.md)**
 
 Drop-in React widget that captures bug reports with screenshots, screen-recordings with synced event timelines, console/network/storage traces, React component state, and source-map–resolved file:line locations — then fans the submission out to GitHub Issues, Linear, Notion, Jira, Sheets, Supabase, your webhook, or our hosted cloud, all in parallel. Browser never holds a private credential.
 
