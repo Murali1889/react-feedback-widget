@@ -232,7 +232,7 @@
 
   <header>
     <h1>Quickstart</h1>
-    <div class="sub">Three integration paths — pick the one that matches what you have.</div>
+    <div class="sub">One line per destination. The library handles every security boundary. You only provide the access token.</div>
     <div class="links">
       <a href="./INTEGRATION.md">Full integration guide →</a>
       <a href="./architecture.html">Architecture flow chart →</a>
@@ -253,7 +253,7 @@
       <span class="tag">Path 2 — recommended</span>
       <h3>Production</h3>
       <div class="meta">~5 minutes · 3 files</div>
-      <div class="desc">Feedback lands in GitHub Issues / Linear / Notion / Jira / Supabase. One catch-all route auto-dispatches to all of them.</div>
+      <div class="desc">Feedback lands in GitHub, Linear, Notion, Jira, Supabase, HubSpot, Slack — one line per destination. Library handles every security check.</div>
     </a>
     <a class="path-card p3" href="#path3">
       <span class="tag">Path 3 — at scale</span>
@@ -320,20 +320,27 @@
   <div class="step">
     <div class="step-row">
       <span class="step-num">2</span>
-      <div class="step-title">Create <code class="inline">feedback.config.ts</code> at your project root</div>
+      <div class="step-title">One config file at your project root</div>
     </div>
     <pre><code><span class="c-com">// feedback.config.ts</span>
-<span class="c-kw">import</span> { defineConfig } <span class="c-kw">from</span> <span class="c-str">'react-visual-feedback/config'</span>
-<span class="c-kw">import</span> { local, githubIssue } <span class="c-kw">from</span> <span class="c-str">'react-visual-feedback/destinations'</span>
+<span class="c-kw">import</span> { defineConfig, connect } <span class="c-kw">from</span> <span class="c-str">'react-visual-feedback'</span>
 
 <span class="c-kw">export default</span> <span class="c-fn">defineConfig</span>({
   destinations: [
-    <span class="c-fn">local</span>(),          <span class="c-com">// always keep — works offline</span>
-    <span class="c-fn">githubIssue</span>(),    <span class="c-com">// server env: GH_TOKEN, GH_REPO</span>
+    connect.<span class="c-fn">local</span>(),                                    <span class="c-com">// always — works offline</span>
+    connect.<span class="c-fn">github</span>({ repo: <span class="c-str">'acme/web'</span> }),              <span class="c-com">// env: GITHUB_TOKEN</span>
+
+    <span class="c-com">// Add as many as you want. Each is one line.</span>
+    <span class="c-com">// connect.linear({ team: '...' }),               // env: LINEAR_API_KEY, LINEAR_TEAM_ID</span>
+    <span class="c-com">// connect.notion({ database: '...' }),           // env: NOTION_TOKEN</span>
+    <span class="c-com">// connect.hubspot(),                             // env: HUBSPOT_TOKEN</span>
+    <span class="c-com">// connect.slack({ channel: '#bugs' }),           // env: SLACK_WEBHOOK_URL</span>
+    <span class="c-com">// connect.jira({ project: 'BUG' }),              // env: JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY</span>
+    <span class="c-com">// connect.supabase(),                            // env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY</span>
   ],
-  auth: { mode: <span class="c-str">'session'</span> },
-  ui:   { variant: <span class="c-str">'two-column'</span> },
+  ui: { variant: <span class="c-str">'two-column'</span> },
 })</code></pre>
+    <div class="tip" style="background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--blue); border-radius: 6px; color: #bae6fd; font-size: 13px; padding: 10px 14px; margin-top: 10px;">💡 Type <code class="inline">connect.</code> in any modern editor — you'll see the full destination menu with inline docs.</div>
   </div>
 
   <div class="step">
@@ -361,18 +368,18 @@
     </div>
     <div class="desc">This is the only server file you need. It auto-dispatches to whatever you put in <code class="inline">destinations[]</code> — add Linear, Notion, Jira, Supabase, and they all route through this same handler.</div>
     <pre><code><span class="c-com">// app/api/feedback/[...rest]/route.ts</span>
-<span class="c-kw">import</span> { createFeedbackRouter, FeedbackAuthError } <span class="c-kw">from</span> <span class="c-str">'react-visual-feedback/server'</span>
+<span class="c-kw">import</span> { createFeedbackHandler } <span class="c-kw">from</span> <span class="c-str">'react-visual-feedback/server'</span>
 <span class="c-kw">import</span> feedbackConfig <span class="c-kw">from</span> <span class="c-str">'@/feedback.config'</span>
 <span class="c-kw">import</span> { getSession } <span class="c-kw">from</span> <span class="c-str">'@/lib/auth'</span>  <span class="c-com">// your existing auth</span>
 
-<span class="c-kw">export const</span> POST = <span class="c-fn">createFeedbackRouter</span>({
+<span class="c-kw">export const</span> POST = <span class="c-fn">createFeedbackHandler</span>({
   ...feedbackConfig,
   authorize: <span class="c-kw">async</span> (req) => {
     <span class="c-kw">const</span> session = <span class="c-kw">await</span> <span class="c-fn">getSession</span>(req)
-    <span class="c-kw">if</span> (!session) <span class="c-kw">throw new</span> <span class="c-fn">FeedbackAuthError</span>()
-    <span class="c-kw">return</span> { userId: session.userId, projectId: session.projectId }
+    <span class="c-kw">return</span> session ? { userId: session.userId, projectId: session.projectId } : <span class="c-num">null</span>
   },
 })</code></pre>
+    <div style="padding: 10px 14px; background: rgba(251, 191, 36, 0.08); border-left: 3px solid var(--amber); border-radius: 6px; color: #fde68a; font-size: 13px; margin-top: 10px;">🔒 <strong style="color: var(--amber);">Security default:</strong> if <code class="inline">NODE_ENV === 'production'</code> and you forget to pass <code class="inline">authorize</code>, the handler <strong>refuses to start</strong> with a clear error pointing to the fix. You can't accidentally ship an open endpoint.</div>
   </div>
 
   <div class="step">
@@ -391,22 +398,33 @@ GH_REPO=acme/web           <span class="c-com"># "owner/repo"</span></code></pre
   </div>
 
   <div class="step">
-    <div class="step-title" style="padding: 0 0 8px;">Adding more destinations — only edit ONE file</div>
-    <div class="desc">Just add the adapter to <code class="inline">destinations[]</code>. No new route file needed — the catch-all router auto-dispatches.</div>
-    <pre><code><span class="c-kw">import</span> { local, githubIssue, linearIssue, notionDb, supabaseProxied }
-  <span class="c-kw">from</span> <span class="c-str">'react-visual-feedback/destinations'</span>
-
-<span class="c-kw">export default</span> <span class="c-fn">defineConfig</span>({
-  destinations: [
-    <span class="c-fn">local</span>(),
-    <span class="c-fn">githubIssue</span>(),       <span class="c-com">// GH_TOKEN, GH_REPO</span>
-    <span class="c-fn">linearIssue</span>(),       <span class="c-com">// LINEAR_API_KEY, LINEAR_TEAM_ID</span>
-    <span class="c-fn">notionDb</span>(),          <span class="c-com">// NOTION_TOKEN, NOTION_DB_ID</span>
-    <span class="c-fn">supabaseProxied</span>(),   <span class="c-com">// SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY</span>
-  ],
-  <span class="c-com">// ...</span>
-})</code></pre>
+    <div class="step-title" style="padding: 0 0 8px;">Adding a new destination — edit ONE file</div>
+    <div class="desc">Add one line to <code class="inline">destinations[]</code>, set its env var. No new route file needed.</div>
+    <pre><code>destinations: [
+  connect.<span class="c-fn">local</span>(),
+  connect.<span class="c-fn">github</span>({ repo: <span class="c-str">'acme/web'</span> }),
+  connect.<span class="c-fn">hubspot</span>(),                       <span class="c-com">// ← NEW: just add the line</span>
+  connect.<span class="c-fn">slack</span>({ channel: <span class="c-str">'#bugs'</span> }),     <span class="c-com">// ← and another</span>
+],</code></pre>
   </div>
+
+  <h2>The full <code class="inline">connect</code> menu</h2>
+  <pre><code><span class="c-kw">import</span> { connect } <span class="c-kw">from</span> <span class="c-str">'react-visual-feedback'</span>
+
+connect.<span class="c-fn">local</span>()                                  <span class="c-com">// browser only — always safe</span>
+connect.<span class="c-fn">github</span>({ repo })                         <span class="c-com">// env: GITHUB_TOKEN</span>
+connect.<span class="c-fn">githubAction</span>()                           <span class="c-com">// env: GITHUB_TOKEN — fire any GH Action workflow</span>
+connect.<span class="c-fn">linear</span>({ team })                         <span class="c-com">// env: LINEAR_API_KEY, LINEAR_TEAM_ID</span>
+connect.<span class="c-fn">notion</span>({ database })                     <span class="c-com">// env: NOTION_TOKEN</span>
+connect.<span class="c-fn">hubspot</span>()                                <span class="c-com">// env: HUBSPOT_TOKEN</span>
+connect.<span class="c-fn">slack</span>({ channel })                       <span class="c-com">// env: SLACK_WEBHOOK_URL  OR  SLACK_BOT_TOKEN</span>
+connect.<span class="c-fn">jira</span>({ project })                        <span class="c-com">// env: JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY</span>
+connect.<span class="c-fn">sheets</span>({ spreadsheet })                  <span class="c-com">// env: GOOGLE_SHEETS_ID, GOOGLE_SERVICE_ACCOUNT_KEY</span>
+connect.<span class="c-fn">supabase</span>()                               <span class="c-com">// env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY</span>
+connect.<span class="c-fn">supabasePublic</span>({ url, anonKey })         <span class="c-com">// browser direct — requires INSERT-only RLS</span>
+connect.<span class="c-fn">webhook</span>({ url })                         <span class="c-com">// server-proxied (default safe)</span>
+connect.<span class="c-fn">webhookDirect</span>({ url })                   <span class="c-com">// browser → URL directly</span>
+connect.<span class="c-fn">cloud</span>({ projectId, ingestToken })        <span class="c-com">// our hosted SKU (backend coming)</span></code></pre>
 
   <!-- ════════════════════════ PATH 3 ════════════════════════ -->
   <h2 class="p3" id="path3">Path 3 — Direct-to-storage uploads (at scale)</h2>
