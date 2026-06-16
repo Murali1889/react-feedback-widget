@@ -1,4 +1,5 @@
 import { timed } from '../contract.js';
+import { proxyPost } from '../proxyPost.js';
 
 /**
  * linearIssue({ endpoint, teamId }) — POSTs to a host-owned route that
@@ -26,20 +27,7 @@ export function linearIssue({ endpoint = '/api/feedback/linear' } = {}) {
     name: 'linear',
     mode: 'server-proxied',
     describe: () => 'linear',
-    send: (feedback) => timed(async () => {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(feedback),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`${endpoint} returned ${res.status}: ${text.slice(0, 200)}`);
-      }
-      const body = await res.json().catch(() => null);
-      return { id: body?.id || null, url: body?.url || null };
-    }),
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
   };
 }
 
@@ -76,20 +64,7 @@ export function githubIssue({ endpoint = '/api/feedback/github' } = {}) {
     name: 'github',
     mode: 'server-proxied',
     describe: () => 'github issues',
-    send: (feedback) => timed(async () => {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(feedback),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`${endpoint} returned ${res.status}: ${text.slice(0, 200)}`);
-      }
-      const body = await res.json().catch(() => null);
-      return { id: body?.id || null, url: body?.url || null };
-    }),
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
   };
 }
 
@@ -149,20 +124,7 @@ export function githubAction({ endpoint = '/api/feedback/githubAction' } = {}) {
     name: 'githubAction',
     mode: 'server-proxied',
     describe: () => 'github actions',
-    send: (feedback) => timed(async () => {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(feedback),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`${endpoint} returned ${res.status}: ${text.slice(0, 200)}`);
-      }
-      const body = await res.json().catch(() => null);
-      return { id: body?.id || null, url: body?.url || null };
-    }),
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
   };
 }
 
@@ -203,19 +165,6 @@ export function notionDb({ endpoint = '/api/feedback/notion' } = {}) {
     name: 'notion',
     mode: 'server-proxied',
     describe: () => 'notion db',
-    send: (feedback) => timed(async () => {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(feedback),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`${endpoint} returned ${res.status}: ${text.slice(0, 200)}`);
-      }
-      const body = await res.json().catch(() => null);
-      return { id: body?.id || null, url: body?.url || null };
-    }),
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
   };
 }

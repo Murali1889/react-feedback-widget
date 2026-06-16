@@ -20,7 +20,32 @@ async function parseWebRequestBody(req, headers) {
     try { return await req.json(); } catch { return null; }
   }
   if (ct.includes('multipart/form-data') && typeof req.formData === 'function') {
-    return req.formData();
+    // The client adapter (proxyPost) sends a known FormData shape:
+    //   feedback (JSON Blob), screenshot (Blob), video (Blob), attachment (Blob)
+    // Reconstruct the original payload so downstream handlers see the same
+    // object shape regardless of how the wire format was negotiated.
+    try {
+      const fd = await req.formData();
+      const out = {};
+      const feedbackField = fd.get('feedback');
+      if (feedbackField) {
+        let json;
+        if (typeof feedbackField === 'string') json = feedbackField;
+        else if (typeof feedbackField.text === 'function') json = await feedbackField.text();
+        else json = await new Response(feedbackField).text();
+        try { Object.assign(out, JSON.parse(json)); } catch { /* malformed metadata */ }
+      }
+      // Re-attach binaries on the same keys the original payload used.
+      const ss = fd.get('screenshot');
+      if (ss && typeof ss !== 'string') out.screenshot = ss;
+      const vid = fd.get('video');
+      if (vid && typeof vid !== 'string') out.videoBlob = vid;
+      const att = fd.get('attachment');
+      if (att && typeof att !== 'string') out.attachment = att;
+      return out;
+    } catch {
+      return null;
+    }
   }
   try { return await req.text(); } catch { return null; }
 }

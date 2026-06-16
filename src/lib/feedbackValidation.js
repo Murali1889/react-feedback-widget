@@ -5,8 +5,8 @@
  * Error messages never echo submitted values (avoid reflective leakage).
  */
 
-const TYPES = ['bug', 'idea', 'praise', 'question', 'other'];
-const SEVERITIES = ['low', 'medium', 'high', 'critical'];
+const TYPES = ['bug', 'feature', 'improvement', 'idea', 'praise', 'question', 'ui-change', 'other'];
+const SEVERITIES = ['low', 'medium', 'high', 'critical', 'P0', 'P1', 'P2', 'P3'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
 

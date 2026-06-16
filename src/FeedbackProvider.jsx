@@ -10,6 +10,7 @@ import React, {
 import { createPortal } from 'react-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import { dispatchToDestinations } from './destinations/registry.js';
+import { compressDataUrl } from './lib/mediaCompression.js';
 import { FeedbackModal } from './FeedbackModal.jsx';
 import { FeedbackModalDrawer } from './feedback-modal/FeedbackModalDrawer.jsx';
 import { FeedbackModalCompact } from './feedback-modal/FeedbackModalCompact.jsx';
@@ -718,6 +719,33 @@ export const FeedbackProvider = ({
         processedData.videoBlob = feedbackData.videoBlob;
         processedData.videoSize = feedbackData.videoBlob.size;
         processedData.videoType = feedbackData.videoBlob.type;
+      }
+
+      // Phase G: compress the screenshot in-browser before dispatch.
+      // PNG → WebP @ q=0.85 typically shrinks 1.2 MB → 140 KB with no
+      // perceptible quality loss. Captures fromBytes/toBytes so the
+      // submission carries proof of the savings.
+      const mediaCfg = captureConfig?.media || {};
+      if (mediaCfg.compress !== false && typeof processedData.screenshot === 'string' && processedData.screenshot.startsWith('data:image/')) {
+        try {
+          const result = await compressDataUrl(processedData.screenshot, {
+            format: mediaCfg.format || 'webp',
+            quality: typeof mediaCfg.quality === 'number' ? mediaCfg.quality : 0.85,
+            maxDimension: mediaCfg.maxDimension || null,
+          });
+          if (result.dataUrl && result.toBytes < result.fromBytes) {
+            processedData.screenshot = result.dataUrl;
+            processedData.mediaCompressed = {
+              format: result.format,
+              fromBytes: result.fromBytes,
+              toBytes: result.toBytes,
+              savedBytes: result.fromBytes - result.toBytes,
+              ratio: Math.round((1 - result.toBytes / result.fromBytes) * 100),
+            };
+          }
+        } catch {
+          // Compression failures never block submission.
+        }
       }
 
       // Extract selectedIntegrations from feedback data

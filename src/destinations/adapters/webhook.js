@@ -1,4 +1,5 @@
 import { timed } from '../contract.js';
+import { proxyPost } from '../proxyPost.js';
 import { assertNoPrivateCredentials } from '../safety.js';
 
 /**
@@ -53,19 +54,6 @@ export function webhookProxied({ endpoint = '/api/feedback/webhook', name = 'web
     name,
     mode: 'server-proxied',
     describe: () => endpoint,
-    send: (feedback) => timed(async () => {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(feedback),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`${endpoint} returned ${res.status}: ${text.slice(0, 200)}`);
-      }
-      const body = await res.json().catch(() => null);
-      return { id: body?.id || null, url: body?.url || null };
-    }),
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
   };
 }
