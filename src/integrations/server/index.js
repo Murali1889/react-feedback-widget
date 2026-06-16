@@ -92,6 +92,7 @@ export { createLinearHandler } from './linear.js';
 export { createNotionHandler } from './notion.js';
 export { createSupabaseHandler } from './supabase.js';
 export { createWebhookHandler } from './webhook.js';
+export { createUploadUrlHandler } from './upload-url.js';
 
 // ============================================
 // PHASE F: SINGLE-CONFIG CATCH-ALL ROUTER

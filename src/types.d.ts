@@ -130,6 +130,21 @@ export interface FeedbackCaptureConfig {
   networkBufferSize?: number;
   networkExcludePatterns?: string[];
   disableNetworkCapture?: boolean;
+  disableVitals?: boolean;
+  disableMutations?: boolean;
+  /** Compress screenshots in-browser before submit. WebP @ 0.85 default. */
+  media?: {
+    compress?: boolean;
+    format?: 'webp' | 'jpeg' | 'png';
+    quality?: number;
+    maxDimension?: number | null;
+  };
+  /** Phase G tier 3 — direct-to-storage upload. When set, browser PUTs
+   *  binaries straight to S3/R2/Supabase via short-lived signed URLs. */
+  upload?: {
+    strategy?: 'json' | 'multipart' | 'signed-url';
+    endpoint?: string;
+  };
 }
 
 export interface FeedbackNetworkEntry {

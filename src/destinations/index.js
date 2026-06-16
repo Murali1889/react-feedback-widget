@@ -35,3 +35,8 @@ export {
   dispatchToDestinations,
   destinationsFromLegacyIntegrations,
 } from './registry.js';
+
+// Signed-URL upload strategy (tier 3) — browser PUTs binaries directly
+// to object storage (S3/R2/Supabase) via short-lived signed URLs.
+// Falls back to multipart if the upload-URL request fails.
+export { uploadViaSignedUrl } from './signedUrlUpload.js';

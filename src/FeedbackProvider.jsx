@@ -10,6 +10,7 @@ import React, {
 import { createPortal } from 'react-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import { dispatchToDestinations } from './destinations/registry.js';
+import { uploadViaSignedUrl } from './destinations/signedUrlUpload.js';
 import { compressDataUrl } from './lib/mediaCompression.js';
 import { FeedbackModal } from './FeedbackModal.jsx';
 import { FeedbackModalDrawer } from './feedback-modal/FeedbackModalDrawer.jsx';
@@ -791,6 +792,25 @@ export const FeedbackProvider = ({
       // Send to integrations if configured AND selected
       const shouldSendToJira = integrationClientRef.current && integrations?.jira?.enabled && selectedIntegrations.jira;
       const shouldSendToSheets = integrationClientRef.current && integrations?.sheets?.enabled && selectedIntegrations.sheets;
+
+      // Phase G tier 3: if upload.strategy === 'signed-url', request signed
+      // upload URLs from the host's `/api/feedback/upload-url` route,
+      // PUT each binary directly to object storage in parallel, and
+      // replace the binary fields on the payload with public-read URLs.
+      // The downstream dispatch then sends only metadata + URLs — no
+      // base64, no multipart bandwidth on the host app server.
+      // Falls back to multipart automatically when the upload-URL
+      // request fails (e.g. dev mode without storage configured).
+      const uploadCfg = captureConfig?.upload;
+      if (uploadCfg?.strategy === 'signed-url') {
+        try {
+          processedData = await uploadViaSignedUrl(processedData, {
+            endpoint: uploadCfg.endpoint || '/api/feedback/upload-url',
+          });
+        } catch {
+          // Never block — proxyPost will use multipart instead.
+        }
+      }
 
       // Fan out to the new destinations array in parallel — runs alongside
       // the legacy integrations path. Each destination resolves with

@@ -77,6 +77,10 @@
       "import": "./dist/server/webhook.js",
       "require": "./dist/server/webhook.js"
     },
+    "./server/upload-url": {
+      "import": "./dist/server/upload-url.js",
+      "require": "./dist/server/upload-url.js"
+    },
     "./integrations": {
       "import": "./dist/integrations/index.js",
       "require": "./dist/integrations/index.js"

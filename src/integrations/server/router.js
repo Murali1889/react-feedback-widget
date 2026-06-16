@@ -42,6 +42,7 @@ import { createLinearHandler } from './linear.js';
 import { createNotionHandler } from './notion.js';
 import { createSupabaseHandler } from './supabase.js';
 import { createWebhookHandler } from './webhook.js';
+import { createUploadUrlHandler } from './upload-url.js';
 import createJiraHandler from '../jira.js';
 import createSheetsHandler from '../sheets.js';
 

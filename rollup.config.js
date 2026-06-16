@@ -102,12 +102,13 @@ export default [
   },
   // Phase E destination server handlers
   ...[
-    { name: 'github',       src: 'github.js' },
-    { name: 'github-action', src: 'github-action.js' },
-    { name: 'linear',       src: 'linear.js' },
-    { name: 'notion',       src: 'notion.js' },
-    { name: 'supabase',     src: 'supabase.js' },
-    { name: 'webhook',      src: 'webhook.js' },
+    { name: 'github',        src: 'github.js' },
+    { name: 'github-action',  src: 'github-action.js' },
+    { name: 'linear',         src: 'linear.js' },
+    { name: 'notion',         src: 'notion.js' },
+    { name: 'supabase',       src: 'supabase.js' },
+    { name: 'webhook',        src: 'webhook.js' },
+    { name: 'upload-url',     src: 'upload-url.js' },
   ].map(({ name, src }) => ({
     input: `src/integrations/server/${src}`,
     output: {
