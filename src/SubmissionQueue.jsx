@@ -170,6 +170,10 @@ export const SubmissionQueue = ({ submissions, onDismiss, mode = 'light' }) => {
       <QueueContainer>
         {visibleSubmissions.map((submission) => {
           const { icon, title, subtitle } = getStatusInfo(submission.status);
+          const results = submission.destinationResults || [];
+          const summary = results.length
+            ? `${results.filter((r) => r.ok).length}/${results.length} destinations`
+            : subtitle;
           return (
             <QueueItem
               key={submission.id}
@@ -178,7 +182,29 @@ export const SubmissionQueue = ({ submissions, onDismiss, mode = 'light' }) => {
               <IconWrapper>{icon}</IconWrapper>
               <Content>
                 <Title>{title}</Title>
-                {subtitle && <Subtitle>{subtitle}</Subtitle>}
+                {summary && <Subtitle>{summary}</Subtitle>}
+                {results.length > 0 && (
+                  <div style={{
+                    display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4,
+                  }}>
+                    {results.map((r) => (
+                      <span key={r.name} title={r.ok
+                        ? `${r.name} · ${r.durationMs}ms${r.url ? ' · ' + r.url : ''}`
+                        : `${r.name} failed: ${r.error || 'unknown'}`}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          fontSize: 10, fontWeight: 600,
+                          padding: '2px 7px', borderRadius: 999,
+                          background: r.ok ? '#dcfce7' : '#fee2e2',
+                          color: r.ok ? '#166534' : '#991b1b',
+                          border: `1px solid ${r.ok ? '#86efac' : '#fecaca'}`,
+                          fontFamily: 'inherit',
+                        }}>
+                        {r.ok ? '✓' : '⚠'} {r.describe || r.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </Content>
               {submission.status !== 'submitting' && (
                 <DismissButton onClick={() => onDismiss(submission.id)}>
