@@ -1,6 +1,6 @@
 # Quickstart — react-visual-feedback
 
-> Pick the path that matches what you have. Each one is complete on its own.
+> One line per destination. The library handles every security boundary. You only provide the access token.
 
 **See also:**
 - [`docs/QUICKSTART.html`](./QUICKSTART.html) — the same guide as a standalone webpage
@@ -40,16 +40,16 @@ No env vars, no server route, no config file.
 
 ## Path 2 — Production (~5 minutes)
 
-For real apps where you want feedback to land in GitHub Issues, Linear, Notion, Jira, Supabase, etc.
+For real apps where you want feedback to land in GitHub Issues, Linear, Notion, Jira, Supabase, HubSpot, Slack, etc.
 
 ### Files you'll create
 
 ```
 your-project/
-├── feedback.config.ts                          ← 10 lines, single source of truth
+├── feedback.config.ts                          ← single source of truth
 ├── app/layout.tsx                              ← 1 line added (Provider)
-├── app/api/feedback/[...rest]/route.ts         ← 10 lines, catch-all router
-└── .env.local                                  ← 2 env vars per destination
+├── app/api/feedback/[...rest]/route.ts         ← 6 lines, catch-all router
+└── .env.local                                  ← 1 env var per destination
 ```
 
 ### Step 1 — Install
@@ -58,27 +58,36 @@ your-project/
 npm install react-visual-feedback
 ```
 
-### Step 2 — Create `feedback.config.ts` at your project root
+### Step 2 — One config file at your project root
 
 ```ts
 // feedback.config.ts
-import { defineConfig } from 'react-visual-feedback/config'
-import { local, githubIssue } from 'react-visual-feedback/destinations'
+import { defineConfig, connect } from 'react-visual-feedback'
 
 export default defineConfig({
   destinations: [
-    local(),          // always keep — works offline
-    githubIssue(),    // server env: GH_TOKEN, GH_REPO
+    connect.local(),                                    // always — works offline
+    connect.github({ repo: 'acme/web' }),              // env: GITHUB_TOKEN
+    // Add as many as you want. Each is one line.
+    // connect.linear({ team: '...' }),                // env: LINEAR_API_KEY, LINEAR_TEAM_ID
+    // connect.notion({ database: '...' }),            // env: NOTION_TOKEN
+    // connect.hubspot(),                              // env: HUBSPOT_TOKEN
+    // connect.slack({ channel: '#bugs' }),            // env: SLACK_WEBHOOK_URL
+    // connect.jira({ project: 'BUG' }),               // env: JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY
+    // connect.sheets({ spreadsheet: '...' }),         // env: GOOGLE_SHEETS_ID, GOOGLE_SERVICE_ACCOUNT_KEY
+    // connect.supabase(),                             // env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+    // connect.webhook({ url: '...' }),                // env: WEBHOOK_URL
   ],
-  auth: { mode: 'session' },
-  ui:   { variant: 'two-column' },
+  ui: { variant: 'two-column' },
 })
 ```
 
-### Step 3 — Use it in your React tree
+> **Tip:** type `connect.` in any modern editor and you'll see the full destination menu with inline docs. No need to remember names.
+
+### Step 3 — Spread the config into the provider
 
 ```tsx
-// app/layout.tsx (Next.js)
+// app/layout.tsx (Next.js App Router)
 import feedbackConfig from '@/feedback.config'
 import { FeedbackProvider } from 'react-visual-feedback'
 
@@ -91,61 +100,61 @@ export default function RootLayout({ children }) {
 }
 ```
 
-### Step 4 — Add ONE catch-all server route
+### Step 4 — One catch-all server route
 
 ```ts
 // app/api/feedback/[...rest]/route.ts
-import { createFeedbackRouter, FeedbackAuthError } from 'react-visual-feedback/server'
+import { createFeedbackHandler } from 'react-visual-feedback/server'
 import feedbackConfig from '@/feedback.config'
-import { getSession } from '@/lib/auth'
+import { getSession } from '@/lib/auth' // your existing auth
 
-export const POST = createFeedbackRouter({
+export const POST = createFeedbackHandler({
   ...feedbackConfig,
   authorize: async (req) => {
     const session = await getSession(req)
-    if (!session) throw new FeedbackAuthError()
-    return { userId: session.userId, projectId: session.projectId }
+    return session ? { userId: session.userId, projectId: session.projectId } : null
   },
 })
 ```
 
-That's it. This **one** route auto-dispatches to GitHub, Linear, Notion, Jira, Supabase, webhook — anything you add to `destinations[]`.
+This **one** route auto-dispatches to every destination in your config — GitHub, Linear, Notion, Jira, Supabase, HubSpot, Slack — they all route through this same handler.
+
+> **Security default:** if `NODE_ENV === 'production'` and you forget to pass `authorize`, **the handler refuses to start** with a clear error pointing to the fix. You can't accidentally ship an open endpoint.
 
 ### Step 5 — Set env vars
 
 ```bash
 # .env.local
-GH_TOKEN=ghp_…             # https://github.com/settings/tokens — fine-grained PAT
+GITHUB_TOKEN=ghp_…         # https://github.com/settings/tokens — fine-grained PAT
                             # "Issues: Read & write" on the target repo
-GH_REPO=acme/web           # "owner/repo"
+
+# add per destination you enabled, e.g.:
+# LINEAR_API_KEY=lin_api_…
+# LINEAR_TEAM_ID=…
+# NOTION_TOKEN=secret_…
+# NOTION_DB_ID=…
+# HUBSPOT_TOKEN=pat-…
+# SLACK_WEBHOOK_URL=https://hooks.slack.com/services/…
 ```
 
-### Step 6 — Restart dev server, press `Alt + A`
-
-Submit a test feedback → a GitHub Issue appears.
+**Done.** Restart your dev server, press `Alt + A`, submit feedback → a GitHub Issue appears.
 
 ---
 
-### Adding more destinations
+### Adding a new destination
 
-Edit `feedback.config.ts`. No new route file needed.
+Edit the array, add one line, set its env var. No new route file.
 
 ```ts
-import { local, githubIssue, linearIssue, notionDb, supabaseProxied } from 'react-visual-feedback/destinations'
-
-export default defineConfig({
-  destinations: [
-    local(),
-    githubIssue(),       // GH_TOKEN, GH_REPO
-    linearIssue(),       // LINEAR_API_KEY, LINEAR_TEAM_ID
-    notionDb(),          // NOTION_TOKEN, NOTION_DB_ID
-    supabaseProxied(),   // SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-  ],
-  // ...
-})
+destinations: [
+  connect.local(),
+  connect.github({ repo: 'acme/web' }),
+  connect.hubspot(),                       // ← NEW: just add the line
+  connect.slack({ channel: '#bugs' }),     // ← and another
+],
 ```
 
-Append the env vars to `.env.local`. Done.
+Append `HUBSPOT_TOKEN=...` and `SLACK_WEBHOOK_URL=...` to `.env.local`. Restart. Done.
 
 ---
 
@@ -179,18 +188,40 @@ export const POST = withSecureDefaults({
     return { userId: s.userId, projectId: s.projectId }
   },
 })(createUploadUrlHandler({
-  // Pick ONE provider:
   provider: 'r2',                                                    // or 's3' or 'supabase'
   bucket: process.env.R2_BUCKET!,
   region: 'auto',
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   accessKeyId: process.env.R2_ACCESS_KEY!,
   secretAccessKey: process.env.R2_SECRET_KEY!,
-  publicBaseUrl: process.env.R2_PUBLIC_URL,  // optional — CDN-fronted reads
+  publicBaseUrl: process.env.R2_PUBLIC_URL,
 }))
 ```
 
-That's it. Browser now uploads the screenshot to R2 directly via a short-lived signed URL. The payload that goes to your destinations carries only a URL reference.
+Now screenshots upload directly from the browser to your bucket. The payload that goes to your destinations carries only a URL reference.
+
+---
+
+## The full `connect` menu
+
+```ts
+import { connect } from 'react-visual-feedback'
+
+connect.local()                                  // browser only — always safe
+connect.github({ repo })                         // env: GITHUB_TOKEN
+connect.githubAction()                           // env: GITHUB_TOKEN — fire any GH Action workflow
+connect.linear({ team })                         // env: LINEAR_API_KEY, LINEAR_TEAM_ID
+connect.notion({ database })                     // env: NOTION_TOKEN
+connect.hubspot()                                // env: HUBSPOT_TOKEN
+connect.slack({ channel })                       // env: SLACK_WEBHOOK_URL  OR  SLACK_BOT_TOKEN
+connect.jira({ project })                        // env: JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY
+connect.sheets({ spreadsheet })                  // env: GOOGLE_SHEETS_ID, GOOGLE_SERVICE_ACCOUNT_KEY
+connect.supabase()                               // env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+connect.supabasePublic({ url, anonKey })         // browser direct — requires INSERT-only RLS
+connect.webhook({ url })                         // server-proxied (default safe)
+connect.webhookDirect({ url })                   // browser → URL directly (no creds)
+connect.cloud({ projectId, ingestToken })        // our hosted SKU (backend coming)
+```
 
 ---
 
@@ -201,10 +232,10 @@ That's it. Browser now uploads the screenshot to R2 directly via a short-lived s
 | Next.js App Router | `app/api/feedback/[...rest]/route.ts` |
 | Next.js Pages Router | `pages/api/feedback/[...rest].ts` (default-export the router) |
 | Remix | `app/routes/api.feedback.$.tsx` (export `action`) |
-| Express | `app.post('/api/feedback/*', router)` |
-| Cloudflare Workers / Hono / Bun | Route any catch-all to the router function |
+| Express | `app.post('/api/feedback/*', handler)` |
+| Cloudflare Workers / Hono / Bun | Route any catch-all to the handler function |
 
-`createFeedbackRouter` returns a function `(req, res?) => Response`. Wire it however your framework expects.
+`createFeedbackHandler` returns a function `(req, res?) => Response`. Wire it however your framework expects.
 
 ---
 
@@ -215,6 +246,8 @@ That's it. Browser now uploads the screenshot to R2 directly via a short-lived s
 | GitHub | https://github.com/settings/tokens → "Fine-grained tokens" → scope to one repo → "Issues: Read & write" |
 | Linear | Linear → Settings → API → Personal API keys |
 | Notion | https://www.notion.so/my-integrations → new internal integration → **don't forget to share your database with it** |
+| HubSpot | HubSpot → Settings → Integrations → Private Apps → create app → scope: `tickets` |
+| Slack | App home → Incoming Webhooks → Create new (gives you SLACK_WEBHOOK_URL) **OR** OAuth & Permissions → bot token + chat:write scope |
 | Jira | https://id.atlassian.com/manage-profile/security/api-tokens |
 | Supabase service-role | Supabase Dashboard → Settings → API → service_role secret |
 | Cloudflare R2 | Dashboard → R2 → "Manage R2 API Tokens" → bucket-scoped token |
@@ -226,7 +259,9 @@ That's it. Browser now uploads the screenshot to R2 directly via a short-lived s
 
 ### "My dev server has no auth — how do I just try this?"
 
-In your `authorize` callback, return a stub for development:
+Two options. Pick one:
+
+**Option A** — return a stub session in dev only (recommended):
 
 ```ts
 authorize: async (req) => {
@@ -234,18 +269,39 @@ authorize: async (req) => {
     return { userId: 'dev', projectId: 'dev', role: 'developer' }
   }
   const s = await getSession(req)
-  if (!s) throw new FeedbackAuthError()
-  return { userId: s.userId, projectId: s.projectId }
+  return s ? { userId: s.userId, projectId: s.projectId } : null
 }
+```
+
+**Option B** — explicitly opt-in to no-auth (origin + rate-limit still apply):
+
+```ts
+export default defineConfig({
+  destinations: [...],
+  auth: { mode: 'none' },  // dev only — production refusal allows it once you opt in
+})
 ```
 
 ### "Will the widget leak my GitHub token?"
 
-**No.** If you accidentally pass a token like `ghp_…` to a client adapter, the constructor throws `FeedbackCredentialLeakError` at build time — before the app even runs. Tokens only live in your server env; the catch-all router reads them when forwarding.
+**No.** If you accidentally pass a token like `ghp_…` to a client adapter, the constructor throws `FeedbackCredentialLeakError` at build time — before the app even runs. Tokens only live in your server env; the catch-all handler reads them when forwarding.
+
+### "What if I forget `authorize` in production?"
+
+`createFeedbackHandler` **refuses to construct** with a clear error pointing to the fix:
+
+```
+createFeedbackHandler: production refusal — no `authorize` callback was
+provided. This would expose the feedback endpoint to anyone. Either pass
+`authorize: async (req) => { ... }` or set `auth: { mode: 'none' }` to
+opt-in to an open endpoint (dev only — origin + rate-limit still apply).
+```
+
+You can't accidentally ship an open endpoint.
 
 ### "Can I use this with Vite / Create React App / no Next.js?"
 
-Yes. You need any server that can run a route (Express, Hono, Cloudflare Workers, Vercel functions, Bun, anything). Wire `createFeedbackRouter` to that server's catch-all route. Or skip the server entirely with Path 1.
+Yes. You need any server that can run a route (Express, Hono, Cloudflare Workers, Vercel functions, Bun, anything). Wire `createFeedbackHandler` to that server's catch-all route. Or skip the server entirely with Path 1.
 
 ### "I'm using SSR — the widget breaks on the server"
 
@@ -273,27 +329,15 @@ Add `ui: { variant: '…' }` to your config:
 | `stepper` | 3-step wizard (Describe → Tag → Send) |
 | `workspace` | Rail + sticky evidence + impact map + annotation pins |
 
-### "Can I customize the AI ticket Markdown that lands in GitHub?"
+### "I want to use the older `githubIssue()` / `linearIssue()` imports — do they still work?"
 
-Wrap an adapter:
+Yes — `connect.github` is just a friendly alias for `githubIssue`. The old imports still work:
 
 ```ts
-const githubIssueCustom = () => {
-  const inner = githubIssue()
-  return {
-    ...inner,
-    send: (feedback) => inner.send({
-      ...feedback,
-      aiTicket: {
-        ...feedback.aiTicket,
-        markdown: `**Triage:** auto-assigned\n\n${feedback.aiTicket.markdown}`,
-      },
-    }),
-  }
-}
-
-// then use githubIssueCustom() in destinations[]
+import { githubIssue, linearIssue, notionDb } from 'react-visual-feedback/destinations'
 ```
+
+`connect` is the recommended shape for new code because it's discoverable (single import, IDE autocompletes all options).
 
 ---
 
@@ -301,10 +345,10 @@ const githubIssueCustom = () => {
 
 ```
 PATH 1  →  1 file changed, 30 seconds, no server
-PATH 2  →  3 files, ~5 minutes, GitHub / Linear / Notion etc.
+PATH 2  →  3 files, ~5 minutes, GitHub / Linear / Notion / HubSpot / Slack / etc.
 PATH 3  →  4 files, ~10 minutes, direct-to-S3/R2/Supabase Storage
 ```
 
-Every path is independent — start with Path 1, upgrade to Path 2 when you need a real backend, upgrade to Path 3 when volume justifies it.
+The library's promise: **one line per destination, you provide the token, we handle security**. Production refuses to start without auth. Tokens are refused at build time if they end up in client code.
 
 For the full reference (every destination, env var, security note, troubleshooting), see [`INTEGRATION.md`](./INTEGRATION.md).
