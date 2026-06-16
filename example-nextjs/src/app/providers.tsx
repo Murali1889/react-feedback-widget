@@ -16,9 +16,17 @@ interface FeedbackProviderWrapperProps {
 
 type ModalVariant = 'centered' | 'drawer' | 'compact' | 'stepper' | 'two-column' | 'workspace'
 
+function readUploadStrategy(): 'json' | 'multipart' | 'signed-url' | undefined {
+  if (typeof window === 'undefined') return undefined
+  const v = new URLSearchParams(window.location.search).get('upload')
+  if (v === 'signed-url' || v === 'multipart' || v === 'json') return v
+  return undefined
+}
+
 export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperProps) {
   const [integrationType, setIntegrationType] = useState<'server' | 'apps-script' | 'zapier'>('server')
   const [modalVariant, setModalVariant] = useState<ModalVariant>('centered')
+  const uploadStrategy = readUploadStrategy()
 
   const handleFeedbackSubmit = async (feedbackData: any) => {
     console.log('Feedback submitted:', feedbackData)
@@ -183,6 +191,10 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
             'checkout-redesign': 'variant-b',
             'demo-mode': true,
           }),
+          // Test flag: ?upload=signed-url|multipart|json overrides the
+          // default upload strategy live. Used by the Playwright E2E
+          // verification scripts.
+          ...(uploadStrategy ? { upload: { strategy: uploadStrategy } } : {}),
         }}
         // The picker overrides the variant set in feedback.config.ts so
         // the demo can switch layouts live.

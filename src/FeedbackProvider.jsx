@@ -785,14 +785,6 @@ export const FeedbackProvider = ({
         }
       }
 
-      if (onSubmit && typeof onSubmit === 'function') {
-        await onSubmit(processedData);
-      }
-
-      // Send to integrations if configured AND selected
-      const shouldSendToJira = integrationClientRef.current && integrations?.jira?.enabled && selectedIntegrations.jira;
-      const shouldSendToSheets = integrationClientRef.current && integrations?.sheets?.enabled && selectedIntegrations.sheets;
-
       // Phase G tier 3: if upload.strategy === 'signed-url', request signed
       // upload URLs from the host's `/api/feedback/upload-url` route,
       // PUT each binary directly to object storage in parallel, and
@@ -801,6 +793,10 @@ export const FeedbackProvider = ({
       // base64, no multipart bandwidth on the host app server.
       // Falls back to multipart automatically when the upload-URL
       // request fails (e.g. dev mode without storage configured).
+      //
+      // Runs BEFORE onSubmit + destinations so the host's onSubmit
+      // (and every adapter) sees the final URL-referenced payload, not
+      // the pre-upload binary version.
       const uploadCfg = captureConfig?.upload;
       if (uploadCfg?.strategy === 'signed-url') {
         try {
@@ -811,6 +807,14 @@ export const FeedbackProvider = ({
           // Never block — proxyPost will use multipart instead.
         }
       }
+
+      if (onSubmit && typeof onSubmit === 'function') {
+        await onSubmit(processedData);
+      }
+
+      // Send to integrations if configured AND selected
+      const shouldSendToJira = integrationClientRef.current && integrations?.jira?.enabled && selectedIntegrations.jira;
+      const shouldSendToSheets = integrationClientRef.current && integrations?.sheets?.enabled && selectedIntegrations.sheets;
 
       // Fan out to the new destinations array in parallel — runs alongside
       // the legacy integrations path. Each destination resolves with
