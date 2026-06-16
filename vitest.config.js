@@ -8,6 +8,7 @@ export default defineConfig({
       ['src/dashboard/**', 'jsdom'],
       ['src/capture/**', 'jsdom'],
       ['src/__tests__/**', 'jsdom'],
+      ['src/feedback-modal/**', 'jsdom'],
     ],
     setupFiles: ['src/ui/__tests__/setup.js'],
     include: ['src/**/*.test.js', 'src/**/*.test.jsx'],
