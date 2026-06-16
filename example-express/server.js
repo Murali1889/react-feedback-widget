@@ -1,50 +1,54 @@
 /**
- * example-express — minimal Express app demonstrating the secure feedback
- * pipeline. Run with:
+ * example-express — minimal Express server using the connect API.
+ *
+ * Same `feedback.config.js` is consumed by both the React app (browser)
+ * and this Express server. One catch-all route dispatches to every
+ * destination in the config.
+ *
+ * Run:
  *
  *   cd example-express && npm install && npm start
  *
- * Authorized request:
- *   curl -X POST -H 'Content-Type: application/json' \
- *        -H 'Cookie: demo-session=ok' \
- *        -d '{"feedback":"hi"}' http://localhost:3001/api/feedback/jira
+ * Submit feedback (dev mode — devSessionAuth lets you through):
  *
- * Unauthorized (returns 401):
  *   curl -X POST -H 'Content-Type: application/json' \
- *        -d '{"feedback":"hi"}' http://localhost:3001/api/feedback/jira
+ *        -d '{"feedback":"the pay button is broken"}' \
+ *        http://localhost:3001/api/feedback/github
+ *
+ * In production (NODE_ENV=production), devSessionAuth() refuses and
+ * tells you to swap in real auth.
  */
 
 import express from 'express';
-import cookieParser from 'cookie-parser';
 import {
-  withSecureDefaults,
-  createJiraHandler,
-  FeedbackAuthError,
+  createFeedbackHandler,
+  devSessionAuth,
 } from 'react-visual-feedback/server';
+import feedbackConfig from './feedback.config.js';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
-app.use(cookieParser());
 
-const secureHandler = withSecureDefaults({
-  authorize: async (req) => {
-    // DEMO ONLY — replace with your real auth.
-    // `req` is the normalized reqLike from withSecureDefaults — see types.d.ts.
-    if (req.cookies?.['demo-session'] !== 'ok') throw new FeedbackAuthError();
-    return { userId: 'demo-user', projectId: 'DEMO', role: 'developer' };
-  },
-})(createJiraHandler({ projectKey: process.env.JIRA_PROJECT_KEY || 'BUG' }));
+const handler = createFeedbackHandler({
+  ...feedbackConfig,
+  authorize: devSessionAuth(),
+  // For production, swap to:
+  //   authorize: devSessionAuth({ secret: process.env.FEEDBACK_SECRET })
+  // OR your own session check (NextAuth / Clerk / lucia / custom).
+});
 
-app.post('/api/feedback/jira', async (req, res) => {
-  // withSecureDefaults returns a Web Response — translate to Express.
-  const webRes = await secureHandler(req);
-  res.status(webRes.status);
-  webRes.headers.forEach((v, k) => res.setHeader(k, v));
-  const body = await webRes.text();
-  res.send(body);
+// Catch-all — handles every destination in feedback.config.js
+app.post('/api/feedback/*', async (req, res) => {
+  const webRes = await handler(req);
+  if (webRes instanceof Response) {
+    res.status(webRes.status);
+    webRes.headers.forEach((v, k) => res.setHeader(k, v));
+    res.send(await webRes.text());
+  }
 });
 
 const port = process.env.PORT || 3001;
 app.listen(port, () => {
-  console.log(`Express example listening on http://localhost:${port}`);
+  console.log(`Express feedback server listening on http://localhost:${port}`);
+  console.log(`  POST /api/feedback/*   — feedback dispatch`);
 });

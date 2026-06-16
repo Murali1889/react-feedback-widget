@@ -117,6 +117,12 @@ export { createSlackHandler } from './slack.js';
 
 export { createFeedbackRouter } from './router.js';
 export { createFeedbackHandler } from './createFeedbackHandler.js';
+export {
+  devSessionAuth,
+  signSession,
+  setSessionCookieAppRouter,
+  setSessionCookieExpress,
+} from './devSessionAuth.js';
 export { defineConfig } from '../../config.js';
 
 // ============================================

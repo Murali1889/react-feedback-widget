@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "express": "^4.19.0",
-    "cookie-parser": "^1.4.6",
     "react-visual-feedback": "file:.."
   }
 }
