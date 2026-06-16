@@ -42,7 +42,12 @@ function isBlobLike(v) {
 
 function inventoryBinaries(payload) {
   const entries = [];
-  if (payload?.screenshot) {
+  // Prefer the pre-encoded Blob if FeedbackProvider's compression step
+  // produced one — saves the dataUrl base64 round-trip.
+  if (payload?.screenshotBlob && isBlobLike(payload.screenshotBlob)) {
+    const b = payload.screenshotBlob;
+    entries.push({ key: 'screenshot', blob: b, mimeType: b.type || 'image/webp', size: b.size });
+  } else if (payload?.screenshot) {
     let blob = null;
     if (isBlobLike(payload.screenshot)) blob = payload.screenshot;
     else if (typeof payload.screenshot === 'string' && payload.screenshot.startsWith('data:image/')) {
@@ -98,6 +103,9 @@ export async function uploadViaSignedUrl(payload, opts = {}) {
         body: e.blob,
       });
       if (!res.ok) throw new Error(`PUT ${sig.url.slice(0, 80)} returned ${res.status}`);
+      // After upload, drop the binary AND the stand-in Blob so neither
+      // gets re-serialized downstream.
+      if (e.key === 'screenshot') delete next.screenshotBlob;
       next[e.key] = {
         url: sig.finalUrl,
         mimeType: e.mimeType,

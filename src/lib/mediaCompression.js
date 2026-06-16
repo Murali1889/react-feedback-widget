@@ -45,6 +45,8 @@ function loadImage(src) {
   });
 }
 
+import { compressInWorker } from './imageCompressorWorker.js';
+
 async function blobToDataUrl(blob) {
   // Browser path
   if (typeof FileReader !== 'undefined') {
@@ -86,21 +88,58 @@ function canvasToBlob(canvas, mime, quality) {
 /**
  * Compress a data: URL (or http(s) URL) image.
  * Always resolves — on error returns the input unchanged.
+ *
+ * Strategy:
+ *   1. If OffscreenCanvas + createImageBitmap are available, dispatch
+ *      to the inline image worker (no main-thread block).
+ *   2. Otherwise fall back to main-thread <Image> + <canvas>.
+ *
+ * Returns { blob, dataUrl, fromBytes, toBytes, format, encodedOn }
+ * where `encodedOn: 'worker' | 'main' | 'passthrough'` makes the
+ * acceleration measurable.
+ *
+ * When the caller doesn't need the inline data URL (multipart /
+ * signed-URL strategy), pass `opts.skipDataUrl = true` to skip the
+ * blob→dataUrl roundtrip — saves ~10-30ms for medium images.
  */
 export async function compressDataUrl(dataUrl, opts = {}) {
-  const { format, quality, maxDimension } = { ...DEFAULTS, ...opts };
+  const { format, quality, maxDimension, skipDataUrl } = { ...DEFAULTS, ...opts };
   if (typeof dataUrl !== 'string' || !dataUrl) {
-    return { blob: null, dataUrl: null, fromBytes: 0, toBytes: 0, format: null };
+    return { blob: null, dataUrl: null, fromBytes: 0, toBytes: 0, format: null, encodedOn: 'passthrough' };
   }
   const fromBytes = estimateDataUrlBytes(dataUrl);
 
+  // ── Fast path: OffscreenCanvas worker ─────────────────────────────────
+  try {
+    const workerPromise = compressInWorker({ dataUrl, format, quality, maxDimension });
+    if (workerPromise) {
+      const r = await workerPromise;
+      if (r?.blob && r.blob.size > 0) {
+        if (r.blob.size >= fromBytes) {
+          return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough', encodedOn: 'passthrough' };
+        }
+        const outDataUrl = skipDataUrl ? null : await blobToDataUrl(r.blob);
+        return {
+          blob: r.blob,
+          dataUrl: outDataUrl,
+          fromBytes,
+          toBytes: r.blob.size,
+          format: format,
+          encodedOn: 'worker',
+        };
+      }
+    }
+  } catch {
+    // worker failed — fall through to main-thread path
+  }
+
   if (typeof Image === 'undefined' || typeof document === 'undefined') {
-    return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough' };
+    return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough', encodedOn: 'passthrough' };
   }
 
   let img;
   try { img = await loadImage(dataUrl); }
-  catch { return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough' }; }
+  catch { return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough', encodedOn: 'passthrough' }; }
 
   // Compute target dimensions
   let w = img.naturalWidth || img.width;
@@ -114,7 +153,7 @@ export async function compressDataUrl(dataUrl, opts = {}) {
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough' };
+  if (!ctx) return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough', encodedOn: 'passthrough' };
   ctx.drawImage(img, 0, 0, w, h);
 
   // Try the requested format first, fall back to JPEG
@@ -130,20 +169,21 @@ export async function compressDataUrl(dataUrl, opts = {}) {
       if (!blob) continue;
       // If compression made it bigger (small icons), return original.
       if (blob.size >= fromBytes) {
-        return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough' };
+        return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough', encodedOn: 'passthrough' };
       }
-      const newDataUrl = await blobToDataUrl(blob);
+      const newDataUrl = skipDataUrl ? null : await blobToDataUrl(blob);
       return {
         blob,
         dataUrl: newDataUrl,
         fromBytes,
         toBytes: blob.size,
         format: mime.split('/')[1],
+        encodedOn: 'main',
       };
     } catch { /* try next */ }
   }
 
-  return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough' };
+  return { blob: null, dataUrl, fromBytes, toBytes: fromBytes, format: 'passthrough', encodedOn: 'passthrough' };
 }
 
 /**

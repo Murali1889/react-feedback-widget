@@ -431,6 +431,34 @@ export const FeedbackProvider = ({
   const overlayRef = useRef(null);
   const highlightRef = useRef(null);
   const startRecordingRef = useRef(null);
+  // Eager compression — pre-warm a WebP encode of the screenshot the
+  // moment we have it, so by the time the user clicks Send Feedback the
+  // promise is already resolved and the modal close is jank-free.
+  // Shape: { dataUrl, promise } | null
+  const eagerCompressionRef = useRef(null);
+
+  function kickEagerCompression(dataUrl) {
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      eagerCompressionRef.current = null;
+      return;
+    }
+    const mediaCfg = captureConfig?.media || {};
+    if (mediaCfg.compress === false) {
+      eagerCompressionRef.current = null;
+      return;
+    }
+    const uploadStrategy = captureConfig?.upload?.strategy;
+    const downstreamIsBinary = uploadStrategy === 'signed-url' || uploadStrategy === 'multipart';
+    eagerCompressionRef.current = {
+      dataUrl,
+      promise: compressDataUrl(dataUrl, {
+        format: mediaCfg.format || 'webp',
+        quality: typeof mediaCfg.quality === 'number' ? mediaCfg.quality : 0.85,
+        maxDimension: mediaCfg.maxDimension || null,
+        skipDataUrl: downstreamIsBinary,
+      }).catch(() => null),
+    };
+  }
 
   const theme = getTheme(mode);
 
@@ -514,6 +542,7 @@ export const FeedbackProvider = ({
 
     try {
       const screenshotData = await captureElementScreenshot(hoveredElement);
+      kickEagerCompression(screenshotData);
       dispatch({ type: 'COMPLETE_CAPTURE', payload: screenshotData });
     } catch (error) {
       showError('Failed to capture screenshot. You can still submit feedback.', 'Capture Error');
@@ -658,6 +687,7 @@ export const FeedbackProvider = ({
 
     try {
       const screenshotData = await captureElementScreenshot(element);
+      kickEagerCompression(screenshotData);
       dispatch({ type: 'COMPLETE_CAPTURE', payload: screenshotData });
     } catch (error) {
       showError('Failed to capture screenshot.', 'Capture Error');
@@ -726,22 +756,49 @@ export const FeedbackProvider = ({
       // PNG → WebP @ q=0.85 typically shrinks 1.2 MB → 140 KB with no
       // perceptible quality loss. Captures fromBytes/toBytes so the
       // submission carries proof of the savings.
+      //
+      // Optimisations:
+      //  1. Worker — when OffscreenCanvas is available, run encoding off
+      //     the main thread (result.encodedOn === 'worker').
+      //  2. Skip dataUrl roundtrip when downstream is multipart or
+      //     signed-URL — both consume the Blob directly, the dataUrl
+      //     would just be ~30ms of wasted base64 encoding.
+      //  3. Stash both `screenshot` (dataUrl, retained for local()
+      //     adapter / inline preview) and `screenshotBlob` (the raw
+      //     compressed Blob) so the multipart builder + signed-URL
+      //     flow consume the Blob directly without re-decoding.
       const mediaCfg = captureConfig?.media || {};
+      const uploadStrategy = captureConfig?.upload?.strategy;
+      const downstreamIsBinary = uploadStrategy === 'signed-url' || uploadStrategy === 'multipart';
       if (mediaCfg.compress !== false && typeof processedData.screenshot === 'string' && processedData.screenshot.startsWith('data:image/')) {
         try {
-          const result = await compressDataUrl(processedData.screenshot, {
+          // OPT: if eager compression already kicked off at capture time
+          // for THIS exact screenshot, await its (likely-already-resolved)
+          // promise. The user typically spent several seconds typing —
+          // compression finished long ago. This is what makes the modal
+          // close jank-free even on huge captures.
+          let eagerResult = null;
+          const eager = eagerCompressionRef.current;
+          if (eager && eager.dataUrl === processedData.screenshot) {
+            eagerResult = await eager.promise;
+            eagerCompressionRef.current = null;
+          }
+          const result = eagerResult || await compressDataUrl(processedData.screenshot, {
             format: mediaCfg.format || 'webp',
             quality: typeof mediaCfg.quality === 'number' ? mediaCfg.quality : 0.85,
             maxDimension: mediaCfg.maxDimension || null,
+            skipDataUrl: downstreamIsBinary,
           });
-          if (result.dataUrl && result.toBytes < result.fromBytes) {
-            processedData.screenshot = result.dataUrl;
+          if (result.blob && result.toBytes < result.fromBytes) {
+            if (result.dataUrl) processedData.screenshot = result.dataUrl;
+            processedData.screenshotBlob = result.blob;
             processedData.mediaCompressed = {
               format: result.format,
               fromBytes: result.fromBytes,
               toBytes: result.toBytes,
               savedBytes: result.fromBytes - result.toBytes,
               ratio: Math.round((1 - result.toBytes / result.fromBytes) * 100),
+              encodedOn: result.encodedOn,
             };
           }
         } catch {

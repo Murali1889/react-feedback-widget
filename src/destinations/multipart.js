@@ -55,9 +55,17 @@ export function buildMultipartFromPayload(payload) {
 
   const metadata = { ...payload };
 
-  // Screenshot — could be a Blob OR a data URL string
+  // Screenshot — prefer the pre-encoded Blob (set by FeedbackProvider's
+  // compression step) over re-decoding the data URL. This skips a
+  // 10-30ms base64 round-trip for typical screenshots.
+  const ssBlob = metadata.screenshotBlob;
   const ss = metadata.screenshot;
-  if (isBlobLike(ss)) {
+  if (isBlobLike(ssBlob)) {
+    out.append('screenshot', ssBlob, `screenshot.${extToMime(ssBlob.type)}`);
+    delete metadata.screenshotBlob;
+    delete metadata.screenshot;
+    attached += 1;
+  } else if (isBlobLike(ss)) {
     out.append('screenshot', ss, `screenshot.${extToMime(ss.type)}`);
     delete metadata.screenshot;
     attached += 1;
