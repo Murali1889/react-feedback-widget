@@ -317,45 +317,77 @@ export default router
 // Commands
 // ───────────────────────────────────────────────────────────────────────────
 
-async function cmdInit() {
-  intro(paint('react-visual-feedback init', c.cyan + c.bold));
+function parseFlag(flags, name) {
+  const idx = flags.findIndex((f) => f === `--${name}` || f.startsWith(`--${name}=`));
+  if (idx === -1) return undefined;
+  const f = flags[idx];
+  if (f.includes('=')) return f.split('=').slice(1).join('=');
+  return flags[idx + 1];
+}
 
+async function cmdInit(flags = []) {
   const fw = detectFramework();
-  log.step(`Detected: ${paint(fw.label, c.cyan)}`);
+  const nonInteractive = flags.includes('--yes') || flags.includes('-y');
 
-  const answers = await group(
-    {
-      destinations: () => multiselect({
-        message: 'Which destinations should this widget submit to?',
-        options: DESTINATIONS.map((d) => ({
-          value: d.id,
-          label: `${d.id}${d.recommended ? ' ★' : ''}`,
-          hint: d.blurb,
-        })),
-        initialValues: ['local'],
-        required: true,
-      }),
-      variant: () => select({
-        message: 'Default modal layout:',
-        options: MODAL_VARIANTS.map((v) => ({ value: v.id, label: v.label, hint: v.blurb })),
-        initialValue: 'two-column',
-      }),
-      confirmEnvStubs: () => confirm({
-        message: `Append env var stubs to ${fw.envFile}?`,
-        initialValue: true,
-      }),
-    },
-    {
-      onCancel: () => {
-        cancel('Setup cancelled.');
-        process.exit(0);
-      },
+  let destIds, variant, confirmEnvStubs;
+
+  if (nonInteractive) {
+    const destsRaw = parseFlag(flags, 'destinations') || parseFlag(flags, 'dests') || 'local';
+    destIds = destsRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    const invalid = destIds.filter((id) => !DESTINATIONS.find((d) => d.id === id));
+    if (invalid.length) {
+      console.log(paint(`✗ Unknown destinations: ${invalid.join(', ')}`, c.red));
+      console.log(`  Available: ${DESTINATIONS.map((d) => d.id).join(', ')}`);
+      process.exit(1);
     }
-  );
+    variant = parseFlag(flags, 'variant') || 'two-column';
+    if (!MODAL_VARIANTS.find((v) => v.id === variant)) {
+      console.log(paint(`✗ Unknown variant: ${variant}`, c.red));
+      console.log(`  Available: ${MODAL_VARIANTS.map((v) => v.id).join(', ')}`);
+      process.exit(1);
+    }
+    confirmEnvStubs = !flags.includes('--no-env');
+    console.log(paint('react-visual-feedback init (non-interactive)', c.cyan + c.bold));
+    console.log(`  Framework: ${paint(fw.label, c.cyan)}`);
+    console.log(`  Destinations: ${paint(destIds.join(', '), c.green)}`);
+    console.log(`  Variant: ${paint(variant, c.green)}`);
+  } else {
+    intro(paint('react-visual-feedback init', c.cyan + c.bold));
+    log.step(`Detected: ${paint(fw.label, c.cyan)}`);
 
-  const { destinations: destIds, variant, confirmEnvStubs } = answers;
+    const answers = await group(
+      {
+        destinations: () => multiselect({
+          message: 'Which destinations should this widget submit to?',
+          options: DESTINATIONS.map((d) => ({
+            value: d.id,
+            label: `${d.id}${d.recommended ? ' ★' : ''}`,
+            hint: d.blurb,
+          })),
+          initialValues: ['local'],
+          required: true,
+        }),
+        variant: () => select({
+          message: 'Default modal layout:',
+          options: MODAL_VARIANTS.map((v) => ({ value: v.id, label: v.label, hint: v.blurb })),
+          initialValue: 'two-column',
+        }),
+        confirmEnvStubs: () => confirm({
+          message: `Append env var stubs to ${fw.envFile}?`,
+          initialValue: true,
+        }),
+      },
+      {
+        onCancel: () => {
+          cancel('Setup cancelled.');
+          process.exit(0);
+        },
+      }
+    );
+    ({ destinations: destIds, variant, confirmEnvStubs } = answers);
+  }
 
-  const s = spinner();
+  const s = nonInteractive ? { start: () => {}, stop: () => {} } : spinner();
   s.start('Writing files…');
 
   const isSrcDir = existsSync(join(CWD, 'src'));
@@ -390,6 +422,17 @@ async function cmdInit() {
   }
 
   s.stop('Files written');
+
+  if (nonInteractive) {
+    console.log('\n  Files written:');
+    if (configRes.wrote)    console.log(`  ${paint('✓', c.green)} ${configRes.path}`);
+    else                    console.log(`  ${paint('·', c.gray)} ${configRes.path} (already exists)`);
+    if (routeRes.wrote)     console.log(`  ${paint('✓', c.green)} ${routeRes.path}`);
+    else if (routeRes.path) console.log(`  ${paint('·', c.gray)} ${routeRes.path} (already exists)`);
+    if (envRes.wrote)       console.log(`  ${paint('✓', c.green)} ${envRes.file} (env stubs appended)`);
+    console.log(`\n  ${paint('Done.', c.green)}`);
+    return;
+  }
 
   // ── Summary ────────────────────────────────────────────────────────────
   const written = [];
@@ -511,6 +554,8 @@ function helpText() {
 ${paint('react-visual-feedback CLI', c.cyan + c.bold)}
 
   ${paint('npx rvf init', c.green)}              ${paint('— interactive setup (config + route + env stubs)', c.gray)}
+  ${paint('npx rvf init --yes', c.green)}        ${paint('— non-interactive (for CI / scripts)', c.gray)}
+       ${paint('--destinations=local,github   --variant=two-column   --no-env', c.gray)}
   ${paint('npx rvf add <name>', c.green)}        ${paint('— add a destination to feedback.config.ts', c.gray)}
   ${paint('npx rvf list', c.green)}              ${paint('— list every available destination', c.gray)}
   ${paint('npx rvf --help', c.green)}            ${paint('— show this', c.gray)}
@@ -524,7 +569,7 @@ const sub = rest[0];
 
 try {
   switch (cmd) {
-    case 'init':   await cmdInit(); break;
+    case 'init':   await cmdInit(rest); break;
     case 'add':    if (!sub) { console.log(helpText()); process.exit(0); } await cmdAdd(sub); break;
     case 'list':   cmdList(); break;
     case '--help':
