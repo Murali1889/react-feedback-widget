@@ -135,6 +135,16 @@ export default [
     plugins: clientPlugins,
     external: ['react', 'react-dom', 'styled-components'],
   },
+  // Shared config helper (Phase F) — tiny passthrough for defineConfig
+  {
+    input: 'src/config.js',
+    output: [
+      { file: 'dist/config.js',     format: 'cjs', sourcemap: true },
+      { file: 'dist/config.esm.js', format: 'esm', sourcemap: true },
+    ],
+    onwarn,
+    plugins: serverPlugins,
+  },
   // Config (shared)
   {
     input: 'src/integrations/config.js',

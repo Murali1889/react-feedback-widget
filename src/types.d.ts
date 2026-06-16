@@ -211,6 +211,96 @@ export interface FeedbackProviderProps {
 export const SimpleFeedbackButton: FC<SimpleFeedbackButtonProps>;
 export const FeedbackProvider: FC<FeedbackProviderProps>;
 
+// =====================================================================
+// Phase E — destinations adapter system
+// =====================================================================
+
+export type FeedbackDestinationMode = 'local' | 'public-token' | 'server-proxied';
+
+export interface FeedbackDestinationResult {
+  name: string;
+  mode?: FeedbackDestinationMode;
+  describe?: string;
+  ok: boolean;
+  id?: string | null;
+  url?: string | null;
+  error?: string;
+  code?: string;
+  durationMs: number;
+}
+
+export interface FeedbackDestination {
+  name: string;
+  mode: FeedbackDestinationMode;
+  describe?: () => string;
+  send: (feedback: FeedbackPayload, ctx?: Record<string, unknown>) =>
+    Promise<Omit<FeedbackDestinationResult, 'name' | 'mode' | 'describe'>>;
+}
+
+// Adapter factories — from react-visual-feedback/destinations
+export function local(opts?: { namespace?: string }): FeedbackDestination;
+export function webhook(opts: { url: string; headers?: Record<string, string>; name?: string }): FeedbackDestination;
+export function webhookProxied(opts?: { endpoint?: string; name?: string }): FeedbackDestination;
+export function supabasePublic(opts: { url: string; anonKey: string; table?: string }): FeedbackDestination;
+export function supabaseProxied(opts?: { endpoint?: string }): FeedbackDestination;
+export function linearIssue(opts?: { endpoint?: string }): FeedbackDestination;
+export function githubIssue(opts?: { endpoint?: string; repo?: string }): FeedbackDestination;
+export function notionDb(opts?: { endpoint?: string }): FeedbackDestination;
+export function cloud(opts: { projectId: string; ingestToken: string; ingestUrl?: string }): FeedbackDestination;
+
+export class FeedbackCredentialLeakError extends Error {
+  code: 'private_credential_in_bundle';
+  detectedAs: string;
+  fieldName: string;
+}
+export function assertNoPrivateCredentials(value: unknown, fieldName: string): void;
+export function detectPrivateCredential(value: unknown): string | null;
+
+// =====================================================================
+// Phase F — shared config + catch-all router
+// =====================================================================
+
+export interface FeedbackConfig {
+  destinations?: FeedbackDestination[];
+  auth?: FeedbackAuthConfig;
+  redact?: 'default' | 'strict' | 'off' | FeedbackRedactionConfig;
+  ui?: {
+    variant?: 'centered' | 'drawer' | 'compact' | 'stepper' | 'two-column' | 'workspace';
+    accent?: string;
+  };
+  /** Override the auto-mapping for specific destination names. */
+  routes?: Record<string, (req: any, res?: any) => Promise<unknown>>;
+  /** Security wrapper options forwarded to withSecureDefaults. */
+  security?: Record<string, unknown>;
+  onDestinationResults?: (results: FeedbackDestinationResult[]) => void;
+}
+
+/**
+ * Single source of truth for both browser and server. The same file is
+ * imported by `<FeedbackProvider {...config} />` and by
+ * `createFeedbackRouter(config)`.
+ */
+export function defineConfig(config: FeedbackConfig): FeedbackConfig;
+
+/**
+ * Authorize callback. Throw FeedbackAuthError to reject.
+ */
+export type FeedbackAuthorize = (req: any) => Promise<AuthorizedFeedbackContext>;
+
+/**
+ * Catch-all server handler that auto-dispatches to the right
+ * createXHandler based on URL last-segment ↔ adapter.name.
+ *
+ *   // app/api/feedback/[...rest]/route.ts
+ *   export const POST = createFeedbackRouter({
+ *     ...feedbackConfig,
+ *     authorize: async (req) => { ... },
+ *   })
+ */
+export function createFeedbackRouter(
+  config: FeedbackConfig & { authorize?: FeedbackAuthorize }
+): (req: any, res?: any) => Promise<unknown>;
+
 // Framework-agnostic capture/core surface
 export interface RingBuffer<T> {
   push(item: T): void;

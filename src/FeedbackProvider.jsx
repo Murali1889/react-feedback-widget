@@ -316,7 +316,16 @@ export const FeedbackProvider = ({
   // and is dispatched alongside `destinations`.
   destinations,
   onDestinationResults,
+  // Phase F: nested ui object lets `<FeedbackProvider {...feedbackConfig} />`
+  // spread a single defineConfig() result cleanly. `ui.variant` maps to
+  // modalVariant, `ui.accent` will map to theme accent (in a later phase).
+  ui,
 }) => {
+  // Unpack `ui:` into its individual props with the explicit prop
+  // winning so a host can still override at the call site.
+  if (ui && typeof ui === 'object') {
+    if (modalVariant === 'centered' && ui.variant) modalVariant = ui.variant;
+  }
   // Stable refs for auth/redact so we can read latest values from callbacks.
   const authRef = useRef(auth);
   authRef.current = auth;
@@ -798,17 +807,23 @@ export const FeedbackProvider = ({
 
     // Race between submission and timeout
     Promise.race([submitPromise, timeoutPromise])
-      .then(() => {
-        // Update to success
+      .then((finalData) => {
+        // Update to success — include destination results so the queue
+        // toast / footer can render per-destination status chips.
         dispatch({
           type: 'UPDATE_SUBMISSION',
-          payload: { id: submissionId, status: 'success' }
+          payload: {
+            id: submissionId,
+            status: 'success',
+            destinationResults: finalData?.destinationResults || null,
+          }
         });
 
-        // Auto-remove success after 3 seconds
+        // Auto-remove success after 3 seconds (or 6s if any destination failed)
+        const anyDestFailed = (finalData?.destinationResults || []).some((r) => !r.ok);
         setTimeout(() => {
           dispatch({ type: 'REMOVE_SUBMISSION', payload: submissionId });
-        }, 3000);
+        }, anyDestFailed ? 6000 : 3000);
       })
       .catch((error) => {
         // Update to error

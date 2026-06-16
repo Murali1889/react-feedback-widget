@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { ReactNode, useState } from 'react'
+import feedbackConfig from '../../feedback.config'
 
 // Dynamic import to avoid SSR issues
 const FeedbackProvider = dynamic(
@@ -145,6 +146,15 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
       </div>
 
       <FeedbackProvider
+        // Phase F: spread the single-source-of-truth config. The same
+        // file is imported by the catch-all route at
+        // app/api/feedback/[...rest]/route.ts — adding a new destination
+        // requires editing feedback.config.ts and nothing else.
+        {...feedbackConfig}
+        // Per-page overrides (the picker UI in this demo, host-side
+        // callbacks, the legacy integrations the example shows). Every
+        // prop here wins over the config spread because of object key
+        // order in JSX.
         onSubmit={handleFeedbackSubmit}
         onStatusChange={handleStatusChange}
         dashboard={true}
@@ -155,13 +165,6 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
         integrations={getIntegrationConfig()}
         onIntegrationSuccess={handleIntegrationSuccess}
         onIntegrationError={handleIntegrationError}
-        // Phase A: secure-by-default. Session auth uses same-site cookies
-        // plus automatic CSRF discovery. Server enforces every request.
-        auth={{ mode: 'session' }}
-        redact="default"
-        // Phase C: AI-actionable capture. Every submission gets enriched with
-        // file/line/code-snippet/state/repro/flags. Inspect via the Workflow
-        // Panel's "Copy as → AI ticket (Markdown)" action.
         captureConfig={{
           buildInfo: {
             commit: 'demo-commit-abc123',
@@ -173,6 +176,8 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
             'demo-mode': true,
           }),
         }}
+        // The picker overrides the variant set in feedback.config.ts so
+        // the demo can switch layouts live.
         modalVariant={modalVariant}
       >
         {children}

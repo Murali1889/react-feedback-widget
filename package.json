@@ -81,6 +81,11 @@
       "types": "./dist/types.d.ts",
       "import": "./dist/destinations/index.esm.js",
       "require": "./dist/destinations/index.js"
+    },
+    "./config": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/config.esm.js",
+      "require": "./dist/config.js"
     }
   },
   "files": [

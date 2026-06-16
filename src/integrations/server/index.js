@@ -93,6 +93,28 @@ export { createSupabaseHandler } from './supabase.js';
 export { createWebhookHandler } from './webhook.js';
 
 // ============================================
+// PHASE F: SINGLE-CONFIG CATCH-ALL ROUTER
+// ============================================
+//
+// One catch-all route, one config file, both ends auto-paired.
+//
+//   // feedback.config.ts
+//   import { defineConfig } from 'react-visual-feedback/config'
+//   import { local, githubIssue } from 'react-visual-feedback/destinations'
+//   export default defineConfig({ destinations: [local(), githubIssue({ repo })] })
+//
+//   // app/api/feedback/[...rest]/route.ts
+//   import { createFeedbackRouter } from 'react-visual-feedback/server'
+//   import feedbackConfig from '@/feedback.config'
+//   export const POST = createFeedbackRouter({
+//     ...feedbackConfig,
+//     authorize: async (req) => { ... },
+//   })
+
+export { createFeedbackRouter } from './router.js';
+export { defineConfig } from '../../config.js';
+
+// ============================================
 // CONFIG EXPORTS
 // ============================================
 
