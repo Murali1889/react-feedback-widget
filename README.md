@@ -1,23 +1,71 @@
 # React Visual Feedback
 
-**[Live Demo](https://react-library-demo-rosy.vercel.app/)**
+**[Live Demo](https://react-library-demo-rosy.vercel.app/)** · **[AI Agent Guide](./AGENTS.md)**
 
-A powerful, visual feedback collection tool for React applications with screen recording, session replay, and an integrated dashboard for managing user feedback.
+Drop-in React widget that captures bug reports with screenshots, screen-recordings with synced event timelines, console/network/storage traces, React component state, and source-map–resolved file:line locations — then fans the submission out to GitHub Issues, Linear, Notion, Jira, Sheets, Supabase, your webhook, or our hosted cloud, all in parallel. Browser never holds a private credential.
 
-## Zero-effort integration (v2.3+)
+## 60-second integration
 
-The fastest path: drop the provider in once, then open `node_modules/react-visual-feedback/dist/viewer.html` (or copy it to your `public/` folder) any time you want to see all the feedback that's been collected in this browser.
+```bash
+npm install react-visual-feedback
+```
+
+**One config file**, both sides import it:
+
+```ts
+// feedback.config.ts   ← single source of truth
+import { defineConfig } from 'react-visual-feedback/config'
+import { local, githubIssue } from 'react-visual-feedback/destinations'
+
+export default defineConfig({
+  destinations: [
+    local(),          // browser fallback — always safe
+    githubIssue(),    // server env: GH_TOKEN, GH_REPO
+  ],
+  auth: { mode: 'session' },
+  ui:   { variant: 'two-column' },
+})
+```
+
+**Browser** — one line:
+
+```tsx
+import feedbackConfig from '@/feedback.config'
+import { FeedbackProvider } from 'react-visual-feedback'
+
+<FeedbackProvider {...feedbackConfig}>{children}</FeedbackProvider>
+```
+
+**Server** — one catch-all route (auto-dispatches to the right handler):
+
+```ts
+// app/api/feedback/[...rest]/route.ts
+import { createFeedbackRouter, FeedbackAuthError } from 'react-visual-feedback/server'
+import feedbackConfig from '@/feedback.config'
+import { getSession } from '@/lib/auth'
+
+export const POST = createFeedbackRouter({
+  ...feedbackConfig,
+  authorize: async (req) => {
+    const s = await getSession(req); if (!s) throw new FeedbackAuthError()
+    return { userId: s.userId, projectId: s.projectId }
+  },
+})
+```
+
+That's it. `Alt+A` opens the modal. Adding a destination = editing the config file.
+
+## Try it without a server
 
 ```jsx
-// Anywhere in your app shell
-import { FeedbackProvider } from 'react-visual-feedback';
+import { FeedbackProvider } from 'react-visual-feedback'
 
 <FeedbackProvider dashboard>
   <YourApp />
 </FeedbackProvider>
 ```
 
-That's the whole integration. `Alt+A` opens the capture modal, `Alt+Q` opens the Command Center dashboard. Feedback is saved in this browser's `localStorage`.
+No server, no env vars. Feedback lands in browser `localStorage`. Open the bundled `viewer.html` (or copy to `public/`) to see all captured items. Press `Alt+A` to capture, `Alt+Q` for the dashboard.
 
 ### View collected feedback (no React app needed)
 
