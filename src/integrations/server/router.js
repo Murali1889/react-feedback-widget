@@ -37,6 +37,7 @@
 import { withSecureDefaults } from './withSecureDefaults.js';
 import { FeedbackAuthError } from '../../lib/feedbackErrors.js';
 import { createGithubHandler } from './github.js';
+import { createGithubActionHandler } from './github-action.js';
 import { createLinearHandler } from './linear.js';
 import { createNotionHandler } from './notion.js';
 import { createSupabaseHandler } from './supabase.js';
@@ -53,13 +54,14 @@ import createSheetsHandler from '../sheets.js';
  *  - Custom (`routes:` override below)
  */
 const DEFAULT_HANDLER_MAP = {
-  github:    createGithubHandler,
-  linear:    createLinearHandler,
-  notion:    createNotionHandler,
-  supabase:  createSupabaseHandler,
-  webhook:   createWebhookHandler,
-  jira:      createJiraHandler,
-  sheets:    createSheetsHandler,
+  github:       createGithubHandler,
+  githubAction: createGithubActionHandler,
+  linear:       createLinearHandler,
+  notion:       createNotionHandler,
+  supabase:     createSupabaseHandler,
+  webhook:      createWebhookHandler,
+  jira:         createJiraHandler,
+  sheets:       createSheetsHandler,
 };
 
 /**

@@ -94,6 +94,79 @@ export function githubIssue({ endpoint = '/api/feedback/github' } = {}) {
 }
 
 /**
+ * githubAction({ endpoint }) — server-proxied; triggers any GitHub
+ * Actions workflow listening for repository_dispatch events.
+ *
+ * Why this matters: GitHub Actions is the universal automation surface.
+ * Wiring feedback → Action lets a host run ANYTHING from the report:
+ *   - file an Issue with the AI ticket Markdown as the body
+ *   - ping Slack / PagerDuty
+ *   - auto-create a draft PR with a failing test scaffold
+ *   - run smoke tests / replay the captured interaction trail
+ *   - mirror to internal trackers we don't ship adapters for
+ *
+ * Server handler template (Next.js App Router):
+ *
+ *   // app/api/feedback/githubAction/route.ts
+ *   export async function POST(req: Request) {
+ *     const body = await req.json();
+ *     const res = await fetch(
+ *       `https://api.github.com/repos/${process.env.GH_REPO!}/dispatches`,
+ *       {
+ *         method: 'POST',
+ *         headers: {
+ *           accept: 'application/vnd.github+json',
+ *           authorization: `Bearer ${process.env.GH_TOKEN!}`,
+ *           'x-github-api-version': '2022-11-28',
+ *         },
+ *         body: JSON.stringify({
+ *           event_type: process.env.GH_ACTION_EVENT || 'feedback',
+ *           client_payload: body,
+ *         }),
+ *       }
+ *     );
+ *     // GitHub responds 204 No Content on success — there's no
+ *     // workflow-run id to return until later.
+ *     return Response.json({ id: null, url: null, dispatched: res.ok });
+ *   }
+ *
+ * Host's workflow file:
+ *
+ *   # .github/workflows/feedback.yml
+ *   on:
+ *     repository_dispatch:
+ *       types: [feedback]
+ *   jobs:
+ *     handle:
+ *       runs-on: ubuntu-latest
+ *       steps:
+ *         - uses: actions/checkout@v4
+ *         - run: echo "${{ toJSON(github.event.client_payload) }}"
+ *         # then file an Issue, ping Slack, whatever
+ */
+export function githubAction({ endpoint = '/api/feedback/githubAction' } = {}) {
+  return {
+    name: 'githubAction',
+    mode: 'server-proxied',
+    describe: () => 'github actions',
+    send: (feedback) => timed(async () => {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(feedback),
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`${endpoint} returned ${res.status}: ${text.slice(0, 200)}`);
+      }
+      const body = await res.json().catch(() => null);
+      return { id: body?.id || null, url: body?.url || null };
+    }),
+  };
+}
+
+/**
  * notionDb({ endpoint, databaseId }) — POSTs to a host-owned route that
  * holds the Notion integration token and inserts a page in a database.
  *

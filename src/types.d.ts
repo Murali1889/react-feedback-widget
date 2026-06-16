@@ -245,6 +245,7 @@ export function supabasePublic(opts: { url: string; anonKey: string; table?: str
 export function supabaseProxied(opts?: { endpoint?: string }): FeedbackDestination;
 export function linearIssue(opts?: { endpoint?: string }): FeedbackDestination;
 export function githubIssue(opts?: { endpoint?: string; repo?: string }): FeedbackDestination;
+export function githubAction(opts?: { endpoint?: string }): FeedbackDestination;
 export function notionDb(opts?: { endpoint?: string }): FeedbackDestination;
 export function cloud(opts: { projectId: string; ingestToken: string; ingestUrl?: string }): FeedbackDestination;
 

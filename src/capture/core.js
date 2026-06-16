@@ -15,6 +15,12 @@ export { mountInteractionObserver } from './observers/interaction.js';
 export { mountRouteObserver } from './observers/route.js';
 export { mountErrorObserver } from './observers/error.js';
 export { mountNetworkObserver } from './observers/network.js';
+export {
+  mountWebVitalsObserver,
+  mountDomMutationObserver,
+  snapshotEnvironment,
+  snapshotStorageQuota,
+} from './observers/environment.js';
 export { snapshotFlags } from './observers/flags.js';
 export { resolveBuildInfo } from './buildInfo.js';
 export { snapshotFiberTree } from './snapshot/fiberWalk.js';

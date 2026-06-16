@@ -22,7 +22,7 @@
 export { local } from './adapters/local.js';
 export { webhook, webhookProxied } from './adapters/webhook.js';
 export { supabasePublic, supabaseProxied } from './adapters/supabase.js';
-export { linearIssue, githubIssue, notionDb } from './adapters/issue-trackers.js';
+export { linearIssue, githubIssue, githubAction, notionDb } from './adapters/issue-trackers.js';
 export { cloud } from './adapters/cloud.js';
 
 export {

@@ -87,6 +87,7 @@ export {
 // Always wrap with withSecureDefaults({ authorize }).
 
 export { createGithubHandler } from './github.js';
+export { createGithubActionHandler } from './github-action.js';
 export { createLinearHandler } from './linear.js';
 export { createNotionHandler } from './notion.js';
 export { createSupabaseHandler } from './supabase.js';

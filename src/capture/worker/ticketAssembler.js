@@ -88,6 +88,15 @@ function logsSummary(item, errors, network) {
   return out;
 }
 
+function vitalsSummary(vitals) {
+  // Last value wins per key (vitals are last-best, except CLS which is cumulative).
+  const latest = {};
+  for (const v of vitals || []) {
+    if (v?.key) latest[v.key] = v.value;
+  }
+  return latest;
+}
+
 function environment(input) {
   const it = input.item || {};
   return {
@@ -95,6 +104,11 @@ function environment(input) {
     viewport: it.viewport || null,
     browser: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     flags: input.flags || {},
+    runtime: input.environment || null,
+    storageQuota: input.storageQuota || null,
+    webVitals: vitalsSummary(input.vitals),
+    recentMutations: (input.mutations || []).slice(-20),
+    recentLongTasks: (input.vitals || []).filter((v) => v?.type === 'longtask').slice(-10),
   };
 }
 

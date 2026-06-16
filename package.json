@@ -57,6 +57,10 @@
       "import": "./dist/server/github.js",
       "require": "./dist/server/github.js"
     },
+    "./server/github-action": {
+      "import": "./dist/server/github-action.js",
+      "require": "./dist/server/github-action.js"
+    },
     "./server/linear": {
       "import": "./dist/server/linear.js",
       "require": "./dist/server/linear.js"
