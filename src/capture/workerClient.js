@@ -61,6 +61,10 @@ export function runViaWorker(input) {
       errors: input.errors || [],
       routes: input.routes || [],
       network: input.network || [],
+      vitals: input.vitals || [],
+      mutations: input.mutations || [],
+      environment: input.environment || null,
+      storageQuota: input.storageQuota || null,
       fiberSnapshot: input.fiberSnapshot || {},
       buildInfo: input.buildInfo || {},
       flags: input.flags || {},
@@ -78,6 +82,12 @@ export async function runOnMainThread(input) {
     errors: input.errors || [],
     routes: input.routes || [],
     network: redactNetworkEntries(input.network || [], cfg),
+    // Phase E2: forward the new env-rich fields so the assembler can
+    // embed them under aiTicket.json.environment.
+    vitals: input.vitals || [],
+    mutations: input.mutations || [],
+    environment: input.environment || null,
+    storageQuota: input.storageQuota || null,
     fiberSnapshot: redactFiberSnapshot(input.fiberSnapshot || {}, cfg),
     buildInfo: redactBuildInfo(input.buildInfo || {}, cfg),
     flags: input.flags || {},

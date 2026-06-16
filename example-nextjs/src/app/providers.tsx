@@ -22,7 +22,15 @@ export function FeedbackProviderWrapper({ children }: FeedbackProviderWrapperPro
 
   const handleFeedbackSubmit = async (feedbackData: any) => {
     console.log('Feedback submitted:', feedbackData)
-    // The integrations will handle sending to Jira/Sheets automatically
+    // Stash on window so the Playwright verification script can read it back
+    // and assert that every captured field is present in the payload.
+    if (typeof window !== 'undefined') {
+      ;(window as any).__lastFeedback = feedbackData
+      ;(window as any).__feedbackHistory = [
+        feedbackData,
+        ...((window as any).__feedbackHistory || []).slice(0, 9),
+      ]
+    }
   }
 
   const handleStatusChange = async ({ id, status, comment }: { id: string; status: string; comment?: string }) => {
