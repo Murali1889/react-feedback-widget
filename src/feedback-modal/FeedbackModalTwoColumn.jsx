@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styled, { ThemeProvider, keyframes, css } from 'styled-components';
 import { X, Send, Trash2, Image as ImageIcon, FileCode, Sparkles, MessageSquare } from 'lucide-react';
@@ -10,6 +10,7 @@ import {
   fadeIn, FieldLabel, FieldRow, TextArea, PillRow, Pill,
   SubmitButton, CloseX, ZoomedBackdrop,
 } from './shared.js';
+import { TimelineScrubber } from './TimelineScrubber.jsx';
 
 /* ----- animations ----- */
 
@@ -396,9 +397,10 @@ const RoyalSubmit = styled(SubmitButton)`
 /* ============ component ============ */
 
 export const FeedbackModalTwoColumn = (props) => {
-  const { isOpen, onClose, elementInfo, screenshot, videoBlob, mode = 'light' } = props;
+  const { isOpen, onClose, elementInfo, screenshot, videoBlob, eventLogs, mode = 'light' } = props;
   const theme = getTheme(mode);
   const s = useFeedbackModalState(props);
+  const videoRef = useRef(null);
 
   if (!isOpen) return null;
 
@@ -479,7 +481,7 @@ export const FeedbackModalTwoColumn = (props) => {
                 )}
                 {s.activeImage
                   ? <img src={s.activeImage} alt="Captured screenshot" />
-                  : <video src={s.videoUrl} controls onClick={(e) => e.stopPropagation()} />}
+                  : <video ref={videoRef} src={s.videoUrl} controls onClick={(e) => e.stopPropagation()} />}
               </EvidenceCard>
             ) : (
               <EmptyMedia onClick={() => s.screenshotInputRef.current?.click()}>
@@ -492,6 +494,10 @@ export const FeedbackModalTwoColumn = (props) => {
                   style={{ display: 'none' }}
                   onChange={(e) => s.handleFile(e.target.files[0])} />
               </EmptyMedia>
+            )}
+
+            {s.activeMedia && !s.activeImage && (
+              <TimelineScrubber events={eventLogs || []} videoRef={videoRef} />
             )}
 
             {source && (
