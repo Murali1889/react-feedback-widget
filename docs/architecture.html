@@ -3,26 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>react-visual-feedback — Architecture</title>
+<title>How react-visual-feedback works — flow chart</title>
 <style>
   :root {
-    --bg:       #0b1020;
-    --panel:    #131933;
-    --panel-2:  #1a2147;
-    --border:   rgba(255,255,255,0.08);
-    --border-strong: rgba(255,255,255,0.16);
-    --text:     #e7e9f4;
-    --muted:    #a3a8c5;
-    --accent:   #818cf8;
-    --accent-2: #38bdf8;
-    --accent-3: #f472b6;
-    --good:     #34d399;
-    --warn:     #fbbf24;
-    --bad:      #f87171;
-    --mono:     'SF Mono', Menlo, Consolas, monospace;
+    --bg:        #0b1020;
+    --panel:     #131933;
+    --panel-2:   #1a2147;
+    --border:    rgba(255,255,255,0.10);
+    --text:      #e7e9f4;
+    --muted:     #a3a8c5;
+    --indigo:    #818cf8;
+    --blue:      #38bdf8;
+    --pink:      #f472b6;
+    --green:     #34d399;
+    --amber:     #fbbf24;
+    --red:       #f87171;
+    --mono:      'SF Mono', Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   body {
     background:
       radial-gradient(at 20% 0%, rgba(129, 140, 248, 0.12), transparent 50%),
@@ -31,406 +30,473 @@
       var(--bg);
     min-height: 100vh;
   }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 48px 28px 96px; }
-  header { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 36px; }
-  .logo {
-    width: 52px; height: 52px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    display: inline-flex; align-items: center; justify-content: center;
-    box-shadow: 0 8px 22px rgba(129, 140, 248, 0.35);
-  }
-  .logo svg { width: 28px; height: 28px; color: white; }
-  h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
-  .subtitle { color: var(--muted); font-size: 13px; }
-  .links { margin-top: 8px; display: flex; gap: 14px; font-size: 12px; }
-  .links a { color: var(--accent); text-decoration: none; }
-  .links a:hover { text-decoration: underline; }
 
-  h2 {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--muted);
-    font-weight: 700;
-    margin: 48px 0 14px;
-  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 96px; }
 
-  .grid {
-    display: grid;
-    gap: 16px;
-  }
-  .grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-  .grid.cols-2 { grid-template-columns: 1fr 1fr; }
-  @media (max-width: 880px) { .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; } }
+  header { text-align: center; margin-bottom: 48px; }
+  header h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: -0.01em; }
+  header .sub { color: var(--muted); font-size: 14px; }
+  header .links { margin-top: 14px; display: inline-flex; gap: 18px; font-size: 13px; }
+  header .links a { color: var(--indigo); text-decoration: none; }
+  header .links a:hover { text-decoration: underline; }
 
-  .card {
+  /* ─────────────── Step boxes ─────────────── */
+
+  .step {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 18px 20px;
-    box-shadow: 0 12px 30px -18px rgba(15, 23, 42, 0.7);
+    padding: 20px 24px;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 14px 30px -20px rgba(0,0,0,0.8);
     position: relative;
-    overflow: hidden;
   }
-  .card .corner-tag {
-    position: absolute; top: 12px; right: 12px;
-    font-size: 10px; font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 999px;
+
+  .step-num {
+    position: absolute;
+    top: -16px; left: 22px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--indigo), var(--blue));
+    color: white;
+    font-weight: 800; font-size: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px -4px rgba(129, 140, 248, 0.55);
+  }
+  .step h3 {
+    margin: 0 0 10px; font-size: 17px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .step .what {
+    color: var(--muted); font-size: 14px; line-height: 1.55;
+    margin: 0 0 10px;
+  }
+  .step ul {
+    margin: 10px 0 0; padding-left: 20px;
+    color: var(--muted); font-size: 13px; line-height: 1.7;
+  }
+  .step ul li { padding: 1px 0; }
+  .step code {
+    font-family: var(--mono); font-size: 12px;
     background: rgba(255,255,255,0.06);
-    color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 1px 6px; border-radius: 4px;
+    color: #c7d2fe;
   }
-  .card .corner-tag.good { color: var(--good); background: rgba(52,211,153,0.12); }
-  .card .corner-tag.warn { color: var(--warn); background: rgba(251,191,36,0.12); }
-  .card .corner-tag.bad  { color: var(--bad); background: rgba(248,113,113,0.12); }
-
-  .card-title { font-size: 14px; font-weight: 700; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-  .card-title svg { width: 16px; height: 16px; opacity: 0.85; }
-  .card p { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
-  .card code { font-family: var(--mono); font-size: 12px; color: #c7d2fe; background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px; }
-
-  /* Flow row — arrows between cards */
-  .flow {
-    display: grid; gap: 0;
-    grid-template-columns: 1fr 28px 1fr 28px 1fr;
-    align-items: stretch;
+  .step .tip {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(52, 211, 153, 0.08);
+    border-left: 3px solid var(--green);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #a7f3d0;
   }
-  .flow.cols-4 { grid-template-columns: 1fr 28px 1fr 28px 1fr 28px 1fr; }
-  .arrow {
-    display: flex; align-items: center; justify-content: center;
-    color: var(--accent);
-    opacity: 0.6;
-  }
-  .arrow::after {
-    content: "→";
-    font-size: 22px; font-weight: 700;
-  }
-  @media (max-width: 880px) {
-    .flow, .flow.cols-4 { grid-template-columns: 1fr; }
-    .arrow::after { content: "↓"; }
-    .arrow { padding: 6px 0; }
+  .step .warn {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(248, 113, 113, 0.08);
+    border-left: 3px solid var(--red);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #fca5a5;
   }
 
-  /* Tier strip */
-  .tiers { display: grid; gap: 12px; grid-template-columns: 1fr 1fr 1fr; }
-  @media (max-width: 880px) { .tiers { grid-template-columns: 1fr; } }
-  .tier {
+  /* arrow between steps */
+  .arrow-down {
+    display: flex; justify-content: center; align-items: center;
+    margin: 16px auto;
+    color: var(--indigo);
+    opacity: 0.7;
+  }
+  .arrow-down::after {
+    content: "";
+    width: 2px; height: 32px;
+    background: linear-gradient(180deg, var(--indigo), rgba(56, 189, 248, 0.3));
+    display: block;
+    border-radius: 2px;
+  }
+  .arrow-down.with-tip { position: relative; }
+  .arrow-down.with-tip::before {
+    content: "▼";
+    position: absolute;
+    bottom: -4px;
+    color: var(--blue);
+    font-size: 14px;
+  }
+
+  /* ─────────────── Branch (decision) ─────────────── */
+
+  .branch-3 {
+    max-width: 880px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 760px) {
+    .branch-3 { grid-template-columns: 1fr; }
+  }
+
+  .branch-card {
     border-radius: 14px;
     padding: 18px 20px;
     border: 1px solid var(--border);
     position: relative;
   }
-  .tier.t1 { background: linear-gradient(140deg, rgba(244, 114, 182, 0.18), rgba(244, 114, 182, 0.04)); }
-  .tier.t2 { background: linear-gradient(140deg, rgba(56, 189, 248, 0.18), rgba(56, 189, 248, 0.04)); }
-  .tier.t3 { background: linear-gradient(140deg, rgba(52, 211, 153, 0.18), rgba(52, 211, 153, 0.04)); border-color: rgba(52, 211, 153, 0.45); }
-  .tier h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  .tier .pill {
-    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
-    background: rgba(255,255,255,0.08); color: var(--text);
-    text-transform: uppercase; letter-spacing: 0.06em;
+  .branch-card.t1 { background: linear-gradient(140deg, rgba(244, 114, 182, 0.22), rgba(244, 114, 182, 0.05)); border-color: rgba(244, 114, 182, 0.35); }
+  .branch-card.t2 { background: linear-gradient(140deg, rgba(56, 189, 248, 0.22), rgba(56, 189, 248, 0.05)); border-color: rgba(56, 189, 248, 0.35); }
+  .branch-card.t3 { background: linear-gradient(140deg, rgba(52, 211, 153, 0.25), rgba(52, 211, 153, 0.05)); border-color: rgba(52, 211, 153, 0.55); }
+  .branch-card .tag {
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    display: inline-block;
+    margin-bottom: 8px;
   }
-  .tier .num { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-top: 8px; }
-  .tier .pros { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .branch-card h4 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+  .branch-card .desc { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 0 0 12px; }
+  .branch-card .num {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text); opacity: 0.85;
+    padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.12);
+  }
+  .branch-card .when {
+    margin-top: 8px; font-size: 11px; color: var(--muted);
+  }
 
-  /* Destination grid */
-  .dest-grid {
+  /* Fan-in arrows */
+  .fan-in {
+    height: 56px; max-width: 880px; margin: 0 auto;
+    background:
+      linear-gradient(to bottom right, transparent 50%, rgba(129,140,248,0.4) 50%, rgba(129,140,248,0.4) 51%, transparent 51%) left center / 33% 100% no-repeat,
+      linear-gradient(to bottom, rgba(129,140,248,0.4), rgba(129,140,248,0.4)) center top / 2px 100% no-repeat,
+      linear-gradient(to bottom left, transparent 50%, rgba(129,140,248,0.4) 50%, rgba(129,140,248,0.4) 51%, transparent 51%) right center / 33% 100% no-repeat;
+    position: relative;
+  }
+  .fan-in::after {
+    content: "▼"; position: absolute; bottom: -6px; left: 50%;
+    transform: translateX(-50%);
+    color: var(--blue); font-size: 14px;
+  }
+
+  /* ─────────────── Destinations fan-out ─────────────── */
+
+  .dest-strip {
+    max-width: 980px; margin: 0 auto;
     display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
   }
   .dest {
     background: var(--panel-2);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
   }
-  .dest h4 { margin: 0 0 4px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-  .dest .mode { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; }
-  .mode.local { background: rgba(160, 174, 192, 0.18); color: #cbd5e1; }
-  .mode.public { background: rgba(251, 191, 36, 0.15); color: var(--warn); }
-  .mode.proxied { background: rgba(52, 211, 153, 0.15); color: var(--good); }
-  .dest .env { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; word-break: break-word; line-height: 1.6; }
+  .dest .name {
+    font-weight: 700; font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .dest .mode {
+    display: inline-block; font-size: 9px; font-weight: 800;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .mode.local   { background: rgba(160, 174, 192, 0.18); color: #cbd5e1; }
+  .mode.public  { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+  .mode.server  { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .dest .env {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--muted); margin-top: 8px;
+    line-height: 1.5;
+  }
 
-  /* Security */
+  /* ─────────────── Section title ─────────────── */
+
+  .section-title {
+    text-align: center;
+    margin: 56px 0 28px;
+    color: var(--muted);
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.16em;
+  }
+  .section-title .accent { color: var(--indigo); }
+
+  /* ─────────────── Security ─────────────── */
+
   .security {
-    background:
-      linear-gradient(140deg, rgba(248, 113, 113, 0.08), transparent 50%),
-      var(--panel);
-    border: 1px solid rgba(248, 113, 113, 0.3);
+    max-width: 800px; margin: 56px auto 0;
+    background: linear-gradient(140deg, rgba(248, 113, 113, 0.08), transparent 60%), var(--panel);
+    border: 1px solid rgba(248, 113, 113, 0.32);
     border-radius: 14px;
-    padding: 22px 24px;
+    padding: 24px 26px;
   }
-  .security h2 { margin: 0 0 8px; color: var(--bad); text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
-  .security .invariant { font-size: 17px; font-weight: 700; color: var(--text); margin: 0 0 12px; letter-spacing: -0.01em; }
-  .security ul { margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; line-height: 1.7; }
-  .security code { color: #fda4af; background: rgba(248, 113, 113, 0.1); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); }
+  .security h3 {
+    margin: 0 0 6px; color: var(--red);
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.10em;
+  }
+  .security .invariant {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
+    margin: 0 0 14px;
+  }
+  .security ul { margin: 0; padding-left: 22px; color: var(--muted); font-size: 13px; line-height: 1.75; }
+  .security code { background: rgba(248,113,113,0.12); color: #fda4af; padding: 1px 5px; border-radius: 4px; font-family: var(--mono); }
 
-  /* Benchmark table */
-  table.bench { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.bench th, table.bench td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-  table.bench th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
-  table.bench td.num { font-family: var(--mono); }
-  table.bench tr:last-child td { border-bottom: none; }
-  table.bench .save { color: var(--good); font-weight: 700; }
+  /* ─────────────── Legend ─────────────── */
 
-  footer { color: var(--muted); font-size: 12px; margin-top: 56px; text-align: center; }
-  footer a { color: var(--accent); text-decoration: none; }
+  .legend {
+    max-width: 720px; margin: 32px auto 0;
+    text-align: center;
+    color: var(--muted); font-size: 12px;
+  }
+  .legend .swatch {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 0 12px;
+  }
+  .legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-server { background: var(--green); }
+  .dot-public { background: var(--amber); }
+  .dot-local  { background: #94a3b8; }
+
+  footer {
+    text-align: center;
+    margin-top: 64px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  footer a { color: var(--indigo); text-decoration: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
-    <div class="logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-      </svg>
-    </div>
-    <div>
-      <h1>react-visual-feedback — architecture</h1>
-      <div class="subtitle">From browser capture to N destinations · with security boundaries highlighted</div>
-      <div class="links">
-        <a href="./INTEGRATION.md">Integration guide</a>
-        <a href="../AGENTS.md">AI agent guide</a>
-        <a href="../README.md">README</a>
-      </div>
+    <h1>How react-visual-feedback works</h1>
+    <div class="sub">A top-to-bottom flow chart of what happens when a user clicks the feedback button.</div>
+    <div class="links">
+      <a href="./INTEGRATION.md">Read the full integration guide →</a>
+      <a href="../AGENTS.md">AI agent reference →</a>
+      <a href="../README.md">README →</a>
     </div>
   </header>
 
-  <!-- ─────────────── Submit pipeline ─────────────── -->
-  <h2>Submit pipeline</h2>
-  <div class="flow">
+  <!-- ─────────────── Step 1: Capture ─────────────── -->
+  <div class="step">
+    <span class="step-num">1</span>
+    <h3>User triggers feedback</h3>
+    <p class="what">The reporter hits a keyboard shortcut or clicks a floating button.</p>
+    <ul>
+      <li><code>Alt + A</code> — open the form right now (manual feedback)</li>
+      <li><code>Alt + Q</code> — pick an element first, then write feedback about it</li>
+      <li><code>Alt + W</code> — record their screen + voice while reproducing the bug</li>
+    </ul>
+  </div>
 
-    <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19 4l-3.5 3.5M9 19l3.5-3.5M5 12H1m22 0h-4M12 5V1m0 22v-4"/></svg>
-        Capture
-      </div>
-      <p>Reporter presses <code>Alt+A</code> or <code>Alt+Q</code>. The widget snapshots the clicked element + React fiber state, computes selector path, walks build info & active flags. Eager compression kicks off the moment a screenshot lands.</p>
-    </div>
+  <div class="arrow-down with-tip"></div>
 
-    <div class="arrow"></div>
-
-    <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M12 3v18M5 5l14 14M19 5L5 19"/></svg>
-        Compress
-        <span class="corner-tag good">Worker</span>
-      </div>
-      <p>PNG → WebP @ q=0.85 via OffscreenCanvas in a Web Worker. Typical screenshot 1.0 MB → 20 KB (98%). Main thread never blocks. <code>encodedOn: 'worker'</code> in the payload metadata.</p>
-    </div>
-
-    <div class="arrow"></div>
-
-    <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7m-9-4v4m-5 0h10"/></svg>
-        Build AI ticket
-      </div>
-      <p>Assembles Markdown + JSON: Where (file:line), Repro (last 30 actions), Logs, Environment (Vitals, network, locale, memory), State (fiber), Evidence, Annotations.</p>
+  <!-- ─────────────── Step 2: Capture evidence ─────────────── -->
+  <div class="step">
+    <span class="step-num">2</span>
+    <h3>The widget captures ALL the evidence</h3>
+    <p class="what">In the background, observers that have been running since page load assemble a full picture of the bug. The user doesn't have to type any of this — it's already there.</p>
+    <ul>
+      <li><strong>Screenshot</strong> of the clicked element (or full viewport)</li>
+      <li><strong>What was clicked</strong> — React component name, source file:line, props + state</li>
+      <li><strong>Reproduction recipe</strong> — last 30 clicks, inputs, route changes</li>
+      <li><strong>Logs</strong> — recent network calls, console output, storage writes, errors</li>
+      <li><strong>Performance</strong> — Web Vitals (LCP/CLS/INP), long tasks, memory, network speed</li>
+      <li><strong>Environment</strong> — browser, viewport, color scheme, locale, timezone, build commit</li>
+    </ul>
+    <div class="tip">
+      💡 This is what makes the widget AI-friendly: the dev (or the LLM picking up the ticket) gets a complete repro without the user typing anything.
     </div>
   </div>
 
-  <div class="flow" style="margin-top: 12px;">
-    <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-        Upload strategy
-      </div>
-      <p>Auto-pick by config:<br>
-      <code>json</code> · <code>multipart</code> · <code>signed-url</code><br>
-      See tier comparison below.</p>
-    </div>
+  <div class="arrow-down with-tip"></div>
 
-    <div class="arrow"></div>
-
-    <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
-        Dispatch
-        <span class="corner-tag">Parallel</span>
-      </div>
-      <p><code>dispatchToDestinations()</code> fans out to every adapter in parallel. Per-destination status: <code>{ ok, id, url, durationMs }</code>. One failure never blocks another.</p>
-    </div>
-
-    <div class="arrow"></div>
-
-    <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-        Surface
-      </div>
-      <p>Submission toast renders status chips per destination: <code>✓ local · ✓ github · ⚠ supabase</code>. Failed-fanout toasts stay 6s instead of 3s.</p>
+  <!-- ─────────────── Step 3: Compress ─────────────── -->
+  <div class="step">
+    <span class="step-num">3</span>
+    <h3>Compress the screenshot</h3>
+    <p class="what">A raw PNG screenshot is huge — typically 1 MB. We re-encode it to WebP at quality 0.85 in an off-main-thread Web Worker (using OffscreenCanvas).</p>
+    <ul>
+      <li>Typical result: <code>1.0 MB → 20 KB</code> (98% smaller)</li>
+      <li>No quality loss visible to a human</li>
+      <li>Main thread never blocks — the modal stays smooth</li>
+      <li>Compression starts the MOMENT the screenshot is captured, not at submit time. By the time the user finishes typing, it's already done.</li>
+    </ul>
+    <div class="tip">
+      ⚡ Measured: cold submit takes 326 ms; warm submit (user typed for 2.5s) takes 53 ms. 6× faster because compression already finished while they were typing.
     </div>
   </div>
+
+  <div class="arrow-down with-tip"></div>
+
+  <!-- ─────────────── Step 4: AI ticket ─────────────── -->
+  <div class="step">
+    <span class="step-num">4</span>
+    <h3>Build the AI-ready ticket</h3>
+    <p class="what">Everything from step 2 gets formatted into both Markdown (so a human can read it) and JSON (so a tool can parse it).</p>
+    <ul>
+      <li><strong>## Summary</strong> — what the user wrote</li>
+      <li><strong>## Where</strong> — <code>src/Checkout.jsx:42</code> with ±10 lines of code around it</li>
+      <li><strong>## Repro</strong> — the last 30 user actions, numbered</li>
+      <li><strong>## Logs</strong> — failing network calls, errors, recent storage writes</li>
+      <li><strong>## Environment</strong> — Vitals, browser, build commit, active flags</li>
+      <li><strong>## State at click time</strong> — the React component's props + state</li>
+    </ul>
+    <div class="tip">
+      🎯 An LLM that reads this can usually figure out the fix without ever opening the app.
+    </div>
+  </div>
+
+  <div class="arrow-down with-tip"></div>
+
+  <!-- ─────────────── Step 5: Pick strategy ─────────────── -->
+  <div class="step">
+    <span class="step-num">5</span>
+    <h3>Pick how to send the binary data</h3>
+    <p class="what">The screenshot (and any video) is binary. There are three ways to send it — the widget picks the best one based on your config and what's in the payload.</p>
+  </div>
+
+  <div class="arrow-down with-tip"></div>
+
+  <div class="section-title"><span class="accent">⤿ branches into one of three tiers ⤾</span></div>
 
   <!-- ─────────────── Three tiers ─────────────── -->
-  <h2>Upload tiers — picked automatically</h2>
-  <div class="tiers">
-
-    <div class="tier t1">
-      <h3><span class="pill">Tier 1</span> json</h3>
-      <p>Inline base64 in JSON. No binary handling on the server.</p>
-      <div class="num">30.5 KB / destination</div>
-      <div class="pros">When: no binary, or <code>local()</code> only.</div>
+  <div class="branch-3">
+    <div class="branch-card t1">
+      <span class="tag">Tier 1</span>
+      <h4>JSON</h4>
+      <p class="desc">Inline the binary as base64 inside the JSON payload.</p>
+      <div class="num">30.5 KB per request</div>
+      <div class="when">When: no binary, or only <code>local()</code></div>
     </div>
 
-    <div class="tier t2">
-      <h3><span class="pill">Tier 2</span> multipart</h3>
-      <p>Auto-switch when payload has binary. Separate multipart part — no base64 inflation.</p>
-      <div class="num">24.3 KB / destination</div>
-      <div class="pros">When: <strong>default for binary</strong> — works everywhere.</div>
+    <div class="branch-card t2">
+      <span class="tag">Tier 2 · default</span>
+      <h4>multipart/form-data</h4>
+      <p class="desc">Pull the binary into a separate part. No base64 overhead.</p>
+      <div class="num">24.3 KB per request</div>
+      <div class="when">When: any binary, no extra config — auto.</div>
     </div>
 
-    <div class="tier t3">
-      <h3><span class="pill">Tier 3</span> signed-URL ⭐</h3>
-      <p>Browser PUTs directly to S3 / R2 / Supabase Storage. App server never sees the bytes.</p>
-      <div class="num">8.6 KB / destination</div>
-      <div class="pros">When: <strong>production volume</strong>. Saves bandwidth + parallelizes upload with metadata POST.</div>
+    <div class="branch-card t3">
+      <span class="tag">Tier 3 ★ best</span>
+      <h4>Signed-URL direct upload</h4>
+      <p class="desc">Browser PUTs the binary straight to S3 / R2 / Supabase Storage. Your app server never sees the bytes.</p>
+      <div class="num">8.6 KB per request</div>
+      <div class="when">When: <code>upload.strategy: 'signed-url'</code></div>
     </div>
-
   </div>
 
-  <h2>Real benchmark — 1.07 MB PNG screenshot</h2>
-  <div class="card" style="padding: 18px 22px;">
-    <table class="bench">
-      <thead>
-        <tr>
-          <th>Stage</th>
-          <th>Bytes</th>
-          <th>Where it lives</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Raw capture (PNG)</td>             <td class="num">1,071,952</td>     <td>browser memory</td></tr>
-        <tr><td>WebP compressed (q=0.85)</td>      <td class="num">16,580 <span class="save">(−98%)</span></td>   <td>browser memory</td></tr>
-        <tr><td>Per-destination request — json</td>    <td class="num">30,500</td>   <td>your app server (base64 in JSON)</td></tr>
-        <tr><td>Per-destination request — multipart</td> <td class="num">24,300</td> <td>your app server (binary part)</td></tr>
-        <tr><td>Per-destination request — signed-URL</td> <td class="num">8,600 <span class="save">(72%)</span></td>   <td>your app server (URL refs only)</td></tr>
-        <tr><td>Binary upload (signed-URL)</td>    <td class="num">16,580</td>       <td><strong>direct to object storage</strong></td></tr>
-      </tbody>
-    </table>
+  <div class="fan-in"></div>
+
+  <!-- ─────────────── Step 6: Dispatch ─────────────── -->
+  <div class="step">
+    <span class="step-num">6</span>
+    <h3>Dispatch to every destination — in parallel</h3>
+    <p class="what">Whichever strategy was picked, the final payload now goes out to every destination you configured. They all run at the same time; one failing never blocks another.</p>
+    <ul>
+      <li>Each adapter resolves with <code>{ ok, id, url, durationMs }</code></li>
+      <li>The submission toast shows live per-destination status: <code>✓ local · ✓ github · ⚠ supabase failed</code></li>
+      <li>Failed-fanout toasts stay on screen 6 seconds (instead of 3) so the user has time to read</li>
+    </ul>
   </div>
 
-  <h2>Eager compression — measured 6× faster submit</h2>
-  <div class="card" style="padding: 18px 22px;">
-    <table class="bench">
-      <thead>
-        <tr>
-          <th>Scenario</th>
-          <th>Submit latency</th>
-          <th>encodedOn</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Cold (click Send immediately)</td>     <td class="num">326 ms</td> <td><code>worker</code></td></tr>
-        <tr><td>Warm (typed for 2.5s before Send)</td> <td class="num">53 ms <span class="save">(−83%)</span></td> <td><code>worker</code></td></tr>
-      </tbody>
-    </table>
+  <div class="section-title"><span class="accent">⤿ fans out to your configured destinations ⤾</span></div>
+
+  <!-- ─────────────── Destinations grid ─────────────── -->
+  <div class="dest-strip">
+    <div class="dest">
+      <div class="name">local</div>
+      <span class="mode local">local</span>
+      <div class="env">localStorage<br>no setup</div>
+    </div>
+    <div class="dest">
+      <div class="name">githubIssue</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">GH_TOKEN<br>GH_REPO</div>
+    </div>
+    <div class="dest">
+      <div class="name">githubAction</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">GH_TOKEN<br>GH_ACTION_EVENT</div>
+    </div>
+    <div class="dest">
+      <div class="name">linearIssue</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">LINEAR_API_KEY<br>LINEAR_TEAM_ID</div>
+    </div>
+    <div class="dest">
+      <div class="name">notionDb</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">NOTION_TOKEN<br>NOTION_DB_ID</div>
+    </div>
+    <div class="dest">
+      <div class="name">jira</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">JIRA_DOMAIN<br>JIRA_API_TOKEN</div>
+    </div>
+    <div class="dest">
+      <div class="name">sheets</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">GOOGLE_SHEETS_ID<br>service account</div>
+    </div>
+    <div class="dest">
+      <div class="name">supabaseProxied</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">SUPABASE_URL<br>SERVICE_ROLE_KEY</div>
+    </div>
+    <div class="dest">
+      <div class="name">supabasePublic</div>
+      <span class="mode public">anon + RLS</span>
+      <div class="env">anon key in browser<br>INSERT-only RLS</div>
+    </div>
+    <div class="dest">
+      <div class="name">webhookProxied</div>
+      <span class="mode server">server-proxied</span>
+      <div class="env">WEBHOOK_URL<br>HMAC_SECRET?</div>
+    </div>
+    <div class="dest">
+      <div class="name">webhook (direct)</div>
+      <span class="mode public">public URL</span>
+      <div class="env">public hook URL<br>no creds in headers</div>
+    </div>
+    <div class="dest">
+      <div class="name">cloud</div>
+      <span class="mode public">ingest token</span>
+      <div class="env">our hosted SKU<br>(backend not yet live)</div>
+    </div>
   </div>
 
-  <!-- ─────────────── Destinations ─────────────── -->
-  <h2>Destinations — every option</h2>
-  <div class="dest-grid">
-
-    <div class="dest">
-      <h4>local <span class="mode local">local</span></h4>
-      <div class="env">localStorage · no setup · always safe</div>
-    </div>
-
-    <div class="dest">
-      <h4>githubIssue <span class="mode proxied">server</span></h4>
-      <div class="env">GH_TOKEN · GH_REPO</div>
-    </div>
-
-    <div class="dest">
-      <h4>githubAction <span class="mode proxied">server</span></h4>
-      <div class="env">GH_TOKEN · GH_REPO · GH_ACTION_EVENT</div>
-    </div>
-
-    <div class="dest">
-      <h4>linearIssue <span class="mode proxied">server</span></h4>
-      <div class="env">LINEAR_API_KEY · LINEAR_TEAM_ID</div>
-    </div>
-
-    <div class="dest">
-      <h4>notionDb <span class="mode proxied">server</span></h4>
-      <div class="env">NOTION_TOKEN · NOTION_DB_ID</div>
-    </div>
-
-    <div class="dest">
-      <h4>jira <span class="mode proxied">server</span></h4>
-      <div class="env">JIRA_DOMAIN · JIRA_EMAIL · JIRA_API_TOKEN · JIRA_PROJECT_KEY</div>
-    </div>
-
-    <div class="dest">
-      <h4>sheets <span class="mode proxied">server</span></h4>
-      <div class="env">GOOGLE_SHEETS_ID · GOOGLE_SERVICE_ACCOUNT_KEY</div>
-    </div>
-
-    <div class="dest">
-      <h4>supabaseProxied <span class="mode proxied">server</span></h4>
-      <div class="env">SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY</div>
-    </div>
-
-    <div class="dest">
-      <h4>supabasePublic <span class="mode public">anon + RLS</span></h4>
-      <div class="env">NEXT_PUBLIC_SUPABASE_URL · NEXT_PUBLIC_SUPABASE_ANON_KEY · INSERT-only RLS policy</div>
-    </div>
-
-    <div class="dest">
-      <h4>webhookProxied <span class="mode proxied">server</span></h4>
-      <div class="env">WEBHOOK_URL · WEBHOOK_HMAC_SECRET? · WEBHOOK_HEADERS?</div>
-    </div>
-
-    <div class="dest">
-      <h4>webhook (direct) <span class="mode public">public URL</span></h4>
-      <div class="env">NEXT_PUBLIC_FEEDBACK_HOOK</div>
-    </div>
-
-    <div class="dest">
-      <h4>cloud <span class="mode public">ingest token</span></h4>
-      <div class="env">NEXT_PUBLIC_RVF_PROJECT · NEXT_PUBLIC_RVF_TOKEN<br><small style="color:#fbbf24">⚠ backend not yet live</small></div>
-    </div>
-
-  </div>
-
-  <!-- ─────────────── Object storage ─────────────── -->
-  <h2>Object storage providers (for signed-URL tier)</h2>
-  <div class="grid cols-3">
-    <div class="card">
-      <div class="card-title">AWS S3 / R2 / MinIO</div>
-      <p>AWS Signature V4 over native crypto. R2 uses <code>region: 'auto'</code> + the R2 endpoint URL. Works for B2, Wasabi, DO Spaces.</p>
-    </div>
-    <div class="card">
-      <div class="card-title">Supabase Storage</div>
-      <p>REST <code>/storage/v1/object/upload/sign/...</code>. 2-hour upload validity. <code>publicBaseUrl</code> for CDN reads.</p>
-    </div>
-    <div class="card">
-      <div class="card-title">Custom signer</div>
-      <p>Pass a function to <code>provider</code>. Receives <code>{ name, mimeType, size, key, config }</code>, returns <code>{ url, headers, finalUrl, expiresAt }</code>.</p>
-    </div>
+  <div class="legend">
+    <span class="swatch"><span class="dot dot-server"></span> server-proxied — credential lives in your server env</span>
+    <span class="swatch"><span class="dot dot-public"></span> public-token — anon key with strict scoping</span>
+    <span class="swatch"><span class="dot dot-local"></span> local — never leaves the browser</span>
   </div>
 
   <!-- ─────────────── Security ─────────────── -->
-  <h2>Security boundary</h2>
   <div class="security">
+    <h3>The security rule that runs through everything</h3>
     <p class="invariant">No browser-side adapter ever holds a production credential.</p>
     <ul>
-      <li><strong>Refused at construction</strong> — adapter constructors throw <code>FeedbackCredentialLeakError</code> if they see a known-private-key shape (GitHub PAT, Linear key, Atlassian token, AWS access key, Stripe secret, Slack token, Notion token, Supabase service-role JWT, …).</li>
-      <li><strong>Server-side proxied by default</strong> — every server-proxied adapter wraps with <code>withSecureDefaults({ authorize })</code> which enforces origin allow-list, CSRF check, rate limit, your authorize callback, payload validation, and defense-in-depth redaction.</li>
-      <li><strong>Public-token adapters</strong> are explicitly named <code>*Public</code> with the RLS / lockdown SQL in the doc. Default is server-proxied; public is opt-in.</li>
-      <li><strong>Storage paths server-scoped</strong> — signed-URL handler derives the path from <code>authContext.projectId/userId</code> so a user with a valid session can only write into their own scope.</li>
-      <li><strong>Short URL expiry</strong> — 5-minute default on AWS Sig V4. URLs are <code>UNSIGNED-PAYLOAD</code> so they accept any-size PUT up to the bucket cap.</li>
-      <li><strong>Hosted cloud SKU</strong> uses Sentry-style write-only ingest tokens — identity, not auth. Worst case if token leaks: garbage feedback to your project from approved origins. No data exfiltration.</li>
+      <li><strong>Refused at build time</strong> — if you accidentally type a real token (<code>ghp_…</code>, <code>lin_api_…</code>, <code>AKIA…</code>, <code>secret_…</code>, Supabase service-role JWT, …) into a client adapter, it throws <code>FeedbackCredentialLeakError</code> before the app even runs.</li>
+      <li><strong>Server-proxied by default</strong> — every <em>server-proxied</em> destination keeps its token in <code>process.env</code>. The browser POSTs to <code>/api/feedback/&lt;destination&gt;</code>; your server adds the token and forwards.</li>
+      <li><strong>Public-token adapters</strong> are explicitly named <code>*Public</code> and ship with the exact RLS / lockdown SQL needed. Default is server-proxied; public is opt-in.</li>
+      <li><strong>Signed-URL storage</strong> — the storage path is server-chosen from <code>authContext.userId/projectId</code>. A user with a valid session can ONLY write into their own scope. 5-minute URL expiry.</li>
+      <li><strong>Hosted cloud</strong> uses Sentry-style write-only ingest tokens — identity, not auth. Worst case if leaked: garbage feedback. No data exfiltration possible.</li>
     </ul>
   </div>
 
   <footer>
-    Generated from the source tree · <a href="./INTEGRATION.md">full integration guide</a> ·
-    <a href="../AGENTS.md">AI agent guide</a>
+    Open this file in any browser · no build step · just <code>open docs/architecture.html</code><br>
+    For deep details, read <a href="./INTEGRATION.md">INTEGRATION.md</a>.
   </footer>
 
 </div>
