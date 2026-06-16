@@ -168,3 +168,34 @@ export function notionDb({ endpoint = '/api/feedback/notion' } = {}) {
     send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
   };
 }
+
+/**
+ * hubspot({ endpoint }) — creates a HubSpot Service Hub ticket.
+ *
+ * Server env: HUBSPOT_TOKEN (Private App, scope: tickets).
+ * Optional: HUBSPOT_PIPELINE, HUBSPOT_STAGE.
+ */
+export function hubspot({ endpoint = '/api/feedback/hubspot' } = {}) {
+  return {
+    name: 'hubspot',
+    mode: 'server-proxied',
+    describe: () => 'hubspot',
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
+  };
+}
+
+/**
+ * slack({ endpoint }) — posts a formatted Slack message.
+ *
+ * Server env (one of):
+ *   SLACK_WEBHOOK_URL   — incoming webhook (simpler)
+ *   SLACK_BOT_TOKEN + SLACK_CHANNEL  — chat.postMessage (richer; gives permalink)
+ */
+export function slack({ endpoint = '/api/feedback/slack' } = {}) {
+  return {
+    name: 'slack',
+    mode: 'server-proxied',
+    describe: () => 'slack',
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
+  };
+}

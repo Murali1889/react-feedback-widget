@@ -93,6 +93,8 @@ export { createNotionHandler } from './notion.js';
 export { createSupabaseHandler } from './supabase.js';
 export { createWebhookHandler } from './webhook.js';
 export { createUploadUrlHandler } from './upload-url.js';
+export { createHubspotHandler } from './hubspot.js';
+export { createSlackHandler } from './slack.js';
 
 // ============================================
 // PHASE F: SINGLE-CONFIG CATCH-ALL ROUTER
@@ -114,6 +116,7 @@ export { createUploadUrlHandler } from './upload-url.js';
 //   })
 
 export { createFeedbackRouter } from './router.js';
+export { createFeedbackHandler } from './createFeedbackHandler.js';
 export { defineConfig } from '../../config.js';
 
 // ============================================

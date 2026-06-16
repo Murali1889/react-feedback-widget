@@ -49,8 +49,8 @@ export function createGithubActionHandler(config = {}) {
   warnIfInsecure(config);
 
   return async (req, res) => {
-    const token = config.token || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-    const repo = config.repo || process.env.GH_REPO;
+    const token = config.token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const repo = config.repo || process.env.GITHUB_REPO || process.env.GH_REPO;
     const eventType = config.eventType || process.env.GH_ACTION_EVENT || 'feedback';
     if (!token || !repo) {
       throw new Error('createGithubActionHandler: missing GH_TOKEN or GH_REPO');
