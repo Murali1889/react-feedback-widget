@@ -396,6 +396,67 @@ class SheetsOAuthClient extends SheetsClient {
 }
 
 // ============================================
+// REFRESH-TOKEN CLIENT (CLI-onboarded OAuth)
+// ============================================
+
+/**
+ * Client for the `rvf auth sheets` flow.
+ *
+ * The CLI walks the user through Google's consent screen once and
+ * persists a long-lived refresh token to .env.local. At request time,
+ * this client trades that refresh token for a fresh access token (cached
+ * in memory with expiry) before every Sheets call.
+ *
+ * No persistence callbacks needed — refresh token is the persistent
+ * unit. Uses `drive.file` scope (per-file, non-sensitive).
+ */
+class SheetsRefreshTokenClient extends SheetsClient {
+  constructor(config) {
+    // Bypass parent's service-account validation
+    super({
+      spreadsheetId: config.spreadsheetId || process.env.GOOGLE_SPREADSHEET_ID,
+      sheetName: config.sheetName,
+      credentials: { client_email: '', private_key: '' },
+    });
+
+    this.clientId = config.clientId || process.env.GOOGLE_CLIENT_ID;
+    this.clientSecret = config.clientSecret || process.env.GOOGLE_CLIENT_SECRET;
+    this.refreshToken = config.refreshToken || process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
+
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error('OAuth client missing. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (or run `npx rvf auth sheets`).');
+    }
+    if (!this.refreshToken) {
+      throw new Error('OAuth refresh token missing. Run `npx rvf auth sheets` to generate one.');
+    }
+  }
+
+  async getAccessToken() {
+    if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
+      return this.accessToken;
+    }
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        refresh_token: this.refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to refresh Google access token: ${text}`);
+    }
+    const data = await response.json();
+    this.accessToken = data.access_token;
+    this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+    return this.accessToken;
+  }
+}
+
+// ============================================
 // REQUEST HANDLERS
 // ============================================
 
@@ -423,7 +484,7 @@ export function createSheetsHandler(config = {}) {
     // Secure path: invoked by withSecureDefaults with parsed feedbackData + ctx.
     if (res && typeof res === 'object' && res.authContext) {
       const feedbackData = req;
-      const ClientClass = config.oauth ? SheetsOAuthClient : SheetsClient;
+      const ClientClass = pickClientClass(config);
       const client = new ClientClass(config);
       const result = await handleAppend(client, feedbackData, config);
       return { data: result };
@@ -434,7 +495,7 @@ export function createSheetsHandler(config = {}) {
       const { action = 'append', feedbackData, feedbackId, status, row } = body;
 
       // Choose client type based on config
-      const ClientClass = config.oauth ? SheetsOAuthClient : SheetsClient;
+      const ClientClass = pickClientClass(config);
       const client = new ClientClass(config);
 
       let result;
@@ -507,6 +568,22 @@ export function createSheetsHandler(config = {}) {
   };
 
   return handler;
+}
+
+/**
+ * Pick the right Sheets client class for this request.
+ *
+ *   1. config.refreshToken or GOOGLE_OAUTH_REFRESH_TOKEN env → CLI-onboarded
+ *      OAuth (refresh-token flow). This is the path `rvf auth sheets` sets up.
+ *   2. config.oauth → callback-driven OAuth (legacy)
+ *   3. default → service account (the original "advanced" path)
+ */
+function pickClientClass(config) {
+  if (config.refreshToken || process.env.GOOGLE_OAUTH_REFRESH_TOKEN) {
+    return SheetsRefreshTokenClient;
+  }
+  if (config.oauth) return SheetsOAuthClient;
+  return SheetsClient;
 }
 
 /**

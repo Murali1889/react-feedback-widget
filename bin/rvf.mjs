@@ -17,6 +17,7 @@ import {
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
+import { runAuth, listAuthDestinations } from './lib/auth/index.mjs';
 
 const CWD = process.cwd();
 
@@ -101,12 +102,14 @@ const DESTINATIONS = [
     ],
   },
   {
-    id: 'sheets', call: 'connect.sheets({ spreadsheet: process.env.GOOGLE_SHEETS_ID })',
-    blurb: 'append rows to a Google Sheet',
-    secure: 'service-account key in server env',
+    id: 'sheets', call: 'connect.sheets()',
+    blurb: 'append rows to a Google Sheet (fast: `rvf auth sheets`)',
+    secure: 'OAuth refresh token + drive.file (per-file) scope, or service-account key',
     envVars: [
-      { k: 'GOOGLE_SHEETS_ID', hint: 'sheet id from the URL' },
-      { k: 'GOOGLE_SERVICE_ACCOUNT_KEY', hint: 'JSON; share the sheet with its email' },
+      { k: 'GOOGLE_SPREADSHEET_ID', hint: 'auto-created by `npx rvf auth sheets`' },
+      { k: 'GOOGLE_OAUTH_REFRESH_TOKEN', hint: 'long-lived; from `npx rvf auth sheets`' },
+      { k: 'GOOGLE_CLIENT_ID', hint: 'from `npx rvf auth sheets` (Desktop-app OAuth client)' },
+      { k: 'GOOGLE_CLIENT_SECRET', hint: 'from `npx rvf auth sheets` — embedded in CLI, not a real secret' },
     ],
   },
   {
@@ -537,6 +540,26 @@ async function cmdAdd(name) {
   outro(paint('Done.', c.green));
 }
 
+async function cmdAuth(name, flags) {
+  if (!name) {
+    console.log(paint('Usage: npx rvf auth <destination>', c.yellow));
+    console.log(`  Supported: ${listAuthDestinations().join(', ')}`);
+    process.exit(1);
+  }
+  const parsed = {
+    envFile: parseFlag(flags, 'env-file'),
+    noOpen: flags.includes('--no-open'),
+    token: parseFlag(flags, 'token'),
+    printOnly: flags.includes('--print-only'),
+    repo: parseFlag(flags, 'repo'),
+    domain: parseFlag(flags, 'domain'),
+    email: parseFlag(flags, 'email'),
+    project: parseFlag(flags, 'project'),
+  };
+  const result = await runAuth({ destination: name, flags: parsed });
+  process.exit(result.exitCode);
+}
+
 function cmdList() {
   console.log(`\n${paint('━━━ Destinations', c.bold + c.cyan)}\n`);
   for (const d of DESTINATIONS) {
@@ -557,6 +580,9 @@ ${paint('react-visual-feedback CLI', c.cyan + c.bold)}
   ${paint('npx rvf init --yes', c.green)}        ${paint('— non-interactive (for CI / scripts)', c.gray)}
        ${paint('--destinations=local,github   --variant=two-column   --no-env', c.gray)}
   ${paint('npx rvf add <name>', c.green)}        ${paint('— add a destination to feedback.config.ts', c.gray)}
+  ${paint('npx rvf auth <name>', c.green)}       ${paint('— get a token and write env vars (90-150s per destination)', c.gray)}
+       ${paint('--no-open --token=… --print-only --env-file=.env', c.gray)}
+       ${paint('supported: ' + listAuthDestinations().join(', '), c.gray)}
   ${paint('npx rvf list', c.green)}              ${paint('— list every available destination', c.gray)}
   ${paint('npx rvf --help', c.green)}            ${paint('— show this', c.gray)}
 
@@ -571,6 +597,7 @@ try {
   switch (cmd) {
     case 'init':   await cmdInit(rest); break;
     case 'add':    if (!sub) { console.log(helpText()); process.exit(0); } await cmdAdd(sub); break;
+    case 'auth':   await cmdAuth(sub, rest.slice(1)); break;
     case 'list':   cmdList(); break;
     case '--help':
     case '-h':

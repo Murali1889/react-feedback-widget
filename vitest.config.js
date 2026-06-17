@@ -11,7 +11,7 @@ export default defineConfig({
       ['src/feedback-modal/**', 'jsdom'],
     ],
     setupFiles: ['src/ui/__tests__/setup.js'],
-    include: ['src/**/*.test.js', 'src/**/*.test.jsx'],
+    include: ['src/**/*.test.js', 'src/**/*.test.jsx', 'bin/**/*.test.mjs'],
     exclude: ['node_modules', 'dist', 'example', 'example-nextjs', 'example-express'],
     coverage: {
       provider: 'v8',
