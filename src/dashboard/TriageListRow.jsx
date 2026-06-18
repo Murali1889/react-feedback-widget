@@ -82,7 +82,11 @@ export function TriageListRow({ item, selected, onSelect }) {
   const onKey = useCallback((e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire(); }
   }, [fire]);
-  const titleText = (item.feedback || '').slice(0, 70);
+  const fullText = (item.feedback || '').trim();
+  const titleText = fullText.slice(0, 70);
+  // Only show the preview if it has content the title doesn't already
+  // cover (avoid the same string rendered twice on every row).
+  const previewText = fullText.length > titleText.length ? fullText.slice(titleText.length).trim() : '';
   const hasImg = item.screenshot && !imgFailed;
 
   return (
@@ -94,7 +98,7 @@ export function TriageListRow({ item, selected, onSelect }) {
       </Thumb>
       <Stack direction="column" gap="2" style={{ flex: 1, minWidth: 0 }}>
         <Title>{titleText || 'Untitled'}</Title>
-        <Preview>{item.feedback}</Preview>
+        {previewText && <Preview>{previewText}</Preview>}
         <Sub>
           <Chip variant={PRIORITY_VARIANT[priority.band] || 'neutral'} dot size="sm">{priority.band}</Chip>
           {item.type && <Chip size="sm">{item.type}</Chip>}

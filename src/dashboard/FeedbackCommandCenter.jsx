@@ -30,6 +30,15 @@ const Panel = styled.div`
   display: grid;
   grid-template-rows: 56px auto 1fr 36px;
   grid-template-columns: 320px minmax(360px, 1fr) 320px;
+
+  @media (max-width: 1024px) {
+    width: 100vw;
+    border-radius: 0;
+    grid-template-columns: 320px 1fr;
+  }
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 const Header = styled.header`
   grid-column: 1 / -1;
@@ -41,8 +50,40 @@ const Header = styled.header`
 const Title = styled.div`font-size: ${pickToken('font.size.md')}; font-weight: 600;`;
 const Spacer = styled.div`flex: 1;`;
 const SummarySlot = styled.div`grid-column: 1 / -1;`;
-const Body = styled.div`grid-column: 1 / -1; display: grid; grid-template-columns: 320px minmax(360px, 1fr) 320px; min-height: 0;`;
-const Col = styled.div`min-height: 0; border-right: 1px solid ${pickToken('color.border')}; &:last-child { border-right: 0; }`;
+const Body = styled.div`
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 320px minmax(360px, 1fr) 320px;
+  min-height: 0;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 320px 1fr;
+  }
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+`;
+const Col = styled.div`
+  min-height: 0;
+  border-right: 1px solid ${pickToken('color.border')};
+  &:last-child { border-right: 0; }
+
+  /* Right (workflow) column collapses to a bottom sheet < 1024px.
+     Below 768 we hide it entirely; selecting an item there pops the
+     evidence view full-width — the workflow chrome is too cramped. */
+  &[data-col="workflow"] {
+    @media (max-width: 1024px) {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      border-right: 0;
+      border-top: 1px solid ${pickToken('color.border')};
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+    @media (max-width: 768px) { display: none; }
+  }
+`;
 const Footer = styled.footer`
   grid-column: 1 / -1;
   display: flex; align-items: center; justify-content: space-between;
@@ -117,13 +158,13 @@ function Inner({
         </Header>
         <SummarySlot><SummaryBar items={items} /></SummarySlot>
         <Body>
-          <Col>
+          <Col data-col="list">
             {error
               ? <ErrorState message={String(error?.message || error)} onRetry={refresh} />
               : <TriageList items={filteredItems} />}
           </Col>
-          <Col><EvidenceStack item={selectedItem} /></Col>
-          <Col>
+          <Col data-col="evidence"><EvidenceStack item={selectedItem} /></Col>
+          <Col data-col="workflow">
             <WorkflowPanel
               item={selectedItem}
               statuses={statusMap}
@@ -138,7 +179,13 @@ function Inner({
           </Col>
         </Body>
         <Footer>
-          <span>{isLoading ? 'Loading…' : `${items.length} items`}</span>
+          <span>
+            {isLoading
+              ? 'Loading…'
+              : filteredItems.length === items.length
+                ? `${items.length} items`
+                : `${filteredItems.length} of ${items.length} items`}
+          </span>
           <span>/ search · j/k next-prev · Esc close</span>
         </Footer>
       </Panel>
