@@ -15,21 +15,39 @@
 
 import { buildMultipartFromPayload } from './multipart.js';
 
+/**
+ * Read the double-submit CSRF token from the document cookie. The server's
+ * withSecureDefaults wrapper requires a matching `x-csrf-token` header
+ * on every state-changing POST when a cookie session is in play. Without
+ * this, every server-proxied destination 403s with `csrf_failed`.
+ */
+function readCsrfFromCookie() {
+  if (typeof document === 'undefined') return null;
+  const m = document.cookie.match(/(?:^|;\s*)(?:csrf-token|XSRF-TOKEN)=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 export async function proxyPost(endpoint, payload) {
   const fd = buildMultipartFromPayload(payload);
+  const csrf = readCsrfFromCookie();
   let res;
   if (fd) {
     // Don't set content-type — the browser adds the proper
     // multipart/form-data; boundary=... automatically when body is FormData.
+    const headers = {};
+    if (csrf) headers['x-csrf-token'] = csrf;
     res = await fetch(endpoint, {
       method: 'POST',
+      headers,
       body: fd,
       credentials: 'same-origin',
     });
   } else {
+    const headers = { 'content-type': 'application/json' };
+    if (csrf) headers['x-csrf-token'] = csrf;
     res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
       credentials: 'same-origin',
     });

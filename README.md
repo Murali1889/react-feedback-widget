@@ -39,44 +39,92 @@ export default function RootLayout({ children }) {
 
 Restart your dev server. Press **`Alt+A`** to file your first feedback. Done.
 
-> **Other destinations** — swap `github` for any of: `linear`, `slack`, `discord`, `notion`, `hubspot`, `sheets`, `supabase`, `jira`. Or run `npx rvf` with no args for an interactive menu.
+> Swap `github` for any other destination — they all use the same `npx rvf init --auth <name>` shape. The full destination matrix is below.
+
+---
+
+## All destinations — copy a row, you're done
+
+| Destination | One-line CLI | Env vars the CLI writes | Setup time | Auto-handles |
+|---|---|---|---|---|
+| **local** (browser) | `npx rvf init --destinations=local` | *(none — uses localStorage)* | 30s | nothing — works offline |
+| **github** Issues | `npx rvf init --auth github` | `GITHUB_TOKEN`, `GITHUB_REPO` | ~3 min | opens prefilled fine-grained PAT page, scoped to `Issues: write` on the picked repo |
+| **linear** | `npx rvf init --auth linear` | `LINEAR_API_KEY`, `LINEAR_TEAM_ID` | ~2.5 min | deep-links `/settings/api`, paste key, picks the team automatically |
+| **slack** channel | `npx rvf init --auth slack` | `SLACK_WEBHOOK_URL` | ~3 min | opens app-create page with a prefilled manifest (incoming-webhook scope) |
+| **discord** channel | `npx rvf init --auth discord` | `DISCORD_WEBHOOK_URL` | ~3 min | paste webhook URL — full multipart binary upload (screenshot + video + audio attached inline) |
+| **notion** database | `npx rvf init --auth notion` | `NOTION_TOKEN`, `NOTION_DB_ID` | ~4 min | active-polls `/v1/search` until you share a DB with the integration |
+| **hubspot** tickets | `npx rvf init --auth hubspot` | `HUBSPOT_TOKEN`, `HUBSPOT_PIPELINE`, `HUBSPOT_STAGE` | ~4 min | auto-fetches your pipelines + stages, picks if there's only one |
+| **sheets** (Google) | `npx rvf init --auth sheets` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN`, `GOOGLE_SPREADSHEET_ID` | ~3.5 min | OAuth loopback + PKCE; auto-creates a new spreadsheet via Drive API |
+| **supabase** table | `npx rvf init --auth supabase` | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | ~3 min | lists your projects via Management API, auto-fetches the service-role key. **Run the `CREATE TABLE` SQL in [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md) once.** |
+| **jira** Cloud | `npx rvf init --auth jira` | `JIRA_DOMAIN`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY` | ~3 min | deep-links `id.atlassian.com/.../api-tokens`, sniffs your email from `git config`, validates against `/myself` + `/project/{KEY}` |
+
+Or pick interactively: `npx rvf` (no args).
+
+You can also chain multiple destinations into one config — the CLI's interactive `init` lets you select with space, or non-interactively:
+
+```bash
+npx rvf init --destinations=local,github,slack,supabase --yes
+# Then run `npx rvf auth <name>` for each one to fill env vars.
+```
+
+When you submit feedback, the widget fans out to **every** destination in parallel. The toast shows per-destination status chips (✓ or ⚠).
 
 ---
 
 ## 🤖 For AI agents
 
-Verbatim instructions an LLM coding assistant can follow:
+Verbatim instructions an LLM coding assistant can follow. Pick the destination from the table above, swap it into Step 1.
 
 ```text
 Task: integrate react-visual-feedback into this React project.
 
-Step 1. Run from the project root:
-        npx rvf init --auth github --yes
+Step 1. Run from the project root (pick a destination — github / linear /
+        slack / discord / notion / hubspot / sheets / supabase / jira):
 
-Step 2. Open the file that wraps the app (app/layout.tsx for Next App
-        Router, src/main.tsx for Vite, src/pages/_app.tsx for Pages
-        Router, src/App.tsx for CRA) and wrap children with:
+          npx rvf init --auth <destination> --yes
+
+        This single command auto-detects the framework (Next App Router,
+        Pages Router, Vite, Express), writes feedback.config.ts, writes
+        the catch-all API route, opens the provider's token page in the
+        browser, then writes the env vars to .env.local.
+
+Step 2. Open the file that wraps the app:
+          · Next App Router → app/layout.tsx
+          · Next Pages Router → src/pages/_app.tsx
+          · Vite → src/main.tsx
+          · CRA → src/App.tsx
+        Wrap children with:
 
           import feedbackConfig from './feedback.config'
           import { FeedbackProvider } from 'react-visual-feedback'
           <FeedbackProvider {...feedbackConfig}>{children}</FeedbackProvider>
 
-        For Next Pages Router, use dynamic({ ssr: false }) to skip SSR
-        — styled-components doesn't tolerate SSR without setup.
+        For Next Pages Router, also use dynamic({ ssr: false }) to skip
+        SSR — styled-components doesn't tolerate SSR without setup.
 
-Step 3. Tell the user to restart `npm run dev` (env-var changes don't
-        hot-reload) and press Alt+A in the browser.
+Step 3. Supabase only: run the CREATE TABLE SQL in
+        docs/SUPABASE_SETUP.md (one time). Other destinations need no
+        extra setup beyond Step 1.
 
-Step 4. Verify with:  npx rvf doctor
+Step 4. Tell the user to restart `npm run dev` (env-var changes don't
+        hot-reload) and press Alt+A in the browser to submit feedback.
 
-Public exports they'll need:
+Step 5. Verify with:  npx rvf doctor
+
+Public exports:
   - react-visual-feedback             → FeedbackProvider, defineConfig, connect
+  - react-visual-feedback/config      → defineConfig
+  - react-visual-feedback/destinations → connect.*, local, githubIssue, …
   - react-visual-feedback/server      → createFeedbackHandler, devSessionAuth
-  - react-visual-feedback/destinations → local, githubIssue, slack, discord, …
+
+Import rule: in feedback.config.ts, import defineConfig from
+'react-visual-feedback/config' and connect from
+'react-visual-feedback/destinations'. NOT from the root entry — the
+root entry pulls the full UI bundle (React + html2canvas) and crashes
+Node when the catch-all API route imports the config file.
 ```
 
-The CLI is the one source of truth for env var names. Adding a
-destination is `npx rvf auth <name>` — never edit `.env.local` manually.
+The CLI is the source of truth for env-var names — never edit `.env.local` by hand. To switch destinations later, run `npx rvf auth <name>` again or `npx rvf add <name>`.
 
 ---
 

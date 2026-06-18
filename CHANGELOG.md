@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.3.1] — 2026-06-18
+
+Same-day fix. Live Chrome end-to-end test of 2.3.0 caught a CSRF bug
+that made every server destination return 403 from the browser.
+
+### Fixed
+- **`proxyPost` now sends the `x-csrf-token` header.** Before this fix,
+  the client read the `csrf-token` cookie (set by withSecureDefaults
+  on the first GET) but never forwarded it as the matching header — so
+  every state-changing POST to `/api/feedback/<name>` failed the
+  double-submit check with `403 csrf_failed`. Tested in Chrome against
+  github/linear/notion/supabase/hubspot/slack — all now reach their
+  destination handlers (and surface real provider errors if creds are
+  missing, instead of failing at the wrapper layer).
+
+### Documentation
+- README now has a per-destination CLI matrix (10 rows: local, github,
+  linear, slack, discord, notion, hubspot, sheets, supabase, jira) with
+  exact env vars + setup time + what the CLI handles automatically.
+  The AI-agent block lists every supported destination by name.
+
 ## [2.3.0] — 2026-06-18
 
 Three-minute integration. `npx rvf init --auth <name>` does the whole
