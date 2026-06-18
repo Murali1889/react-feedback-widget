@@ -40,9 +40,9 @@ describe('createGithubActionHandler', () => {
     expect(body.event_type).toBe('bug-report');
   });
 
-  it('throws when GH_TOKEN missing', async () => {
+  it('throws when GITHUB_TOKEN missing', async () => {
     const handler = createGithubActionHandler({});
-    await expect(handler(FEEDBACK, AUTH_CTX)).rejects.toThrow(/GH_TOKEN/);
+    await expect(handler(FEEDBACK, AUTH_CTX)).rejects.toThrow(/GITHUB_TOKEN/);
   });
 
   it('surfaces a github error with status + body', async () => {

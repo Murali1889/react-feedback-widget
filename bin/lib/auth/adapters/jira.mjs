@@ -94,5 +94,5 @@ export default {
     };
   },
 
-  successHint: 'Try: rvf send-test jira',
+  successHint: 'Restart your dev server, press Alt+A, and submit feedback to land in jira.',
 };

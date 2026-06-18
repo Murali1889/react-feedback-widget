@@ -79,5 +79,5 @@ export default {
     };
   },
 
-  successHint: 'Try: rvf send-test linear',
+  successHint: 'Restart your dev server, press Alt+A, and submit feedback to land in linear.',
 };

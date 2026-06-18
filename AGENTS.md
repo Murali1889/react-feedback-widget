@@ -42,12 +42,12 @@ npm install react-visual-feedback
 ```ts
 // feedback.config.ts   (project root)
 import { defineConfig } from 'react-visual-feedback/config'
-import { local, githubIssue } from 'react-visual-feedback/destinations'
+import { connect } from 'react-visual-feedback'
 
 export default defineConfig({
   destinations: [
-    local(),                  // browser-only fallback — always include
-    githubIssue(),            // env: GH_TOKEN, GH_REPO
+    connect.local(),                  // browser-only fallback — always include
+    connect.github({ repo: 'acme/web' }),  // env: GITHUB_TOKEN, GITHUB_REPO
   ],
   auth:   { mode: 'session' },
   redact: 'default',
@@ -67,22 +67,25 @@ export default function RootLayout({ children }) {
 
 ```ts
 // app/api/feedback/[...rest]/route.ts   (Next.js catch-all)
-import { createFeedbackRouter, FeedbackAuthError }
+import { createFeedbackHandler, devSessionAuth }
   from 'react-visual-feedback/server'
 import feedbackConfig from '@/feedback.config'
-import { getSession } from '@/lib/auth'
 
-export const POST = createFeedbackRouter({
+export const POST = createFeedbackHandler({
   ...feedbackConfig,
-  authorize: async (req) => {
-    const s = await getSession(req)
-    if (!s) throw new FeedbackAuthError()
-    return { userId: s.userId, projectId: s.projectId }
-  },
+  // Dev: passes through with a stub session. Prod: refuses without one.
+  // Swap to your real auth (NextAuth/Clerk/etc) before shipping.
+  authorize: devSessionAuth(),
 })
 ```
 
 That's the whole integration. `Alt+A` opens the modal in dev.
+
+Even faster — one command does init + the auth flow for the destination you want:
+
+```sh
+npx rvf init --auth github
+```
 
 ## Security invariant (do not violate)
 
@@ -131,7 +134,7 @@ src/
 │   ├── safety.js                   FeedbackCredentialLeakError + private-key patterns
 │   └── registry.js                 dispatchToDestinations (parallel fanout)
 ├── integrations/server/            server-side handlers
-│   ├── router.js                   Phase F createFeedbackRouter — catch-all dispatcher
+│   ├── router.js                   createFeedbackRouter / createFeedbackHandler — catch-all dispatcher
 │   ├── github.js linear.js
 │   ├── notion.js supabase.js webhook.js
 │   ├── withSecureDefaults.js       origin + CSRF + rate-limit + redaction wrapper
@@ -147,7 +150,7 @@ src/
 | `react-visual-feedback` | `FeedbackProvider`, `SimpleFeedbackButton`, `FeedbackModal`, theme |
 | `react-visual-feedback/config` | `defineConfig` |
 | `react-visual-feedback/destinations` | every browser adapter + safety guards |
-| `react-visual-feedback/server` | `createFeedbackRouter`, every `createXHandler`, `withSecureDefaults`, error classes |
+| `react-visual-feedback/server` | `createFeedbackHandler` (recommended), `createFeedbackRouter` (low-level), every `createXHandler`, `withSecureDefaults`, `devSessionAuth`, error classes |
 | `react-visual-feedback/capture` | React-bound capture (`CaptureProvider`, `FeedbackErrorBoundary`) |
 | `react-visual-feedback/capture/core` | framework-agnostic capture (no React imports, 30KB) |
 | `react-visual-feedback/ui` | design-token primitives |
@@ -192,7 +195,7 @@ configured per src/ subdir in `vitest.config.js`.
 
 ## Phase history (most recent first)
 
-- **F1** — `defineConfig` + `createFeedbackRouter`; one config file for both sides
+- **F1** — `defineConfig` + `createFeedbackHandler` (wraps `createFeedbackRouter`); one config file for both sides
 - **E** — destinations adapter system + safety guards + 5 community adapters + server handlers
 - **D** — 6 modal variants + smart pre-fill draft + annotation pins + impact map + test scaffold + per-destination status chips
 - **C** — AI-actionable capture (source-map deminify worker, fiber walk, code context, repro recipe, Markdown+JSON ticket)

@@ -43,6 +43,9 @@ import { createNotionHandler } from './notion.js';
 import { createSupabaseHandler } from './supabase.js';
 import { createWebhookHandler } from './webhook.js';
 import { createUploadUrlHandler } from './upload-url.js';
+import { createHubspotHandler } from './hubspot.js';
+import { createSlackHandler } from './slack.js';
+import { createDiscordHandler } from './discord.js';
 import createJiraHandler from '../jira.js';
 import createSheetsHandler from '../sheets.js';
 
@@ -63,6 +66,9 @@ const DEFAULT_HANDLER_MAP = {
   webhook:      createWebhookHandler,
   jira:         createJiraHandler,
   sheets:       createSheetsHandler,
+  hubspot:      createHubspotHandler,
+  slack:        createSlackHandler,
+  discord:      createDiscordHandler,
 };
 
 /**

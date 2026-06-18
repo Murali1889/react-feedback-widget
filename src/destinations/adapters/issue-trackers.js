@@ -41,12 +41,12 @@ export function linearIssue({ endpoint = '/api/feedback/linear' } = {}) {
  *   export async function POST(req: Request) {
  *     const body = await req.json();
  *     const res = await fetch(
- *       `https://api.github.com/repos/${process.env.GH_REPO!}/issues`,
+ *       `https://api.github.com/repos/${process.env.GITHUB_REPO!}/issues`,
  *       {
  *         method: 'POST',
  *         headers: {
  *           accept: 'application/vnd.github+json',
- *           authorization: `Bearer ${process.env.GH_TOKEN!}`,
+ *           authorization: `Bearer ${process.env.GITHUB_TOKEN!}`,
  *         },
  *         body: JSON.stringify({
  *           title: (body.feedback || 'Feedback').slice(0, 120),
@@ -86,12 +86,12 @@ export function githubIssue({ endpoint = '/api/feedback/github' } = {}) {
  *   export async function POST(req: Request) {
  *     const body = await req.json();
  *     const res = await fetch(
- *       `https://api.github.com/repos/${process.env.GH_REPO!}/dispatches`,
+ *       `https://api.github.com/repos/${process.env.GITHUB_REPO!}/dispatches`,
  *       {
  *         method: 'POST',
  *         headers: {
  *           accept: 'application/vnd.github+json',
- *           authorization: `Bearer ${process.env.GH_TOKEN!}`,
+ *           authorization: `Bearer ${process.env.GITHUB_TOKEN!}`,
  *           'x-github-api-version': '2022-11-28',
  *         },
  *         body: JSON.stringify({
@@ -180,6 +180,21 @@ export function hubspot({ endpoint = '/api/feedback/hubspot' } = {}) {
     name: 'hubspot',
     mode: 'server-proxied',
     describe: () => 'hubspot',
+    send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
+  };
+}
+
+/**
+ * discord({ endpoint }) — posts a feedback embed to a Discord channel webhook.
+ *
+ * Server env: DISCORD_WEBHOOK_URL (channel → integrations → webhooks → copy URL).
+ * Severity → embed color (P0 red / P1 orange / P2 yellow / P3 grey).
+ */
+export function discord({ endpoint = '/api/feedback/discord' } = {}) {
+  return {
+    name: 'discord',
+    mode: 'server-proxied',
+    describe: () => 'discord',
     send: (feedback) => timed(() => proxyPost(endpoint, feedback)),
   };
 }

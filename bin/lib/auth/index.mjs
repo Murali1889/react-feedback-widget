@@ -64,7 +64,16 @@ export async function runAuth({ destination, flags = {} }) {
   let verifyResult = { ok: true };
   let extras = {};
 
-  if (adapter.flow === 'oauth-loopback') {
+  // --web routes paste-flow adapters through our hosted OAuth website.
+  if (flags.web && adapter.runWebOAuth) {
+    const result = await adapter.runWebOAuth({ clack, flags, prereqs });
+    if (!result?.ok) {
+      clack.log.error(result?.message || 'Web OAuth flow failed.');
+      clack.outro(paint('Re-run `rvf auth ' + destination + '` after fixing the issue.', c.yellow));
+      return { ok: false, exitCode: 1 };
+    }
+    Object.assign(extras, result);
+  } else if (adapter.flow === 'oauth-loopback') {
     if (flags.printOnly) {
       clack.log.info('Print-only mode is not supported for oauth-loopback adapters.');
       clack.outro(paint('Re-run without --print-only.', c.yellow));
@@ -118,7 +127,7 @@ export async function runAuth({ destination, flags = {} }) {
     }
   }
 
-  if (adapter.postVerify && adapter.flow !== 'oauth-loopback') {
+  if (adapter.postVerify && adapter.flow !== 'oauth-loopback' && !(flags.web && adapter.runWebOAuth)) {
     const extra = await adapter.postVerify({ clack, token, verifyResult, prereqs });
     if (extra === null) {
       clack.cancel('Cancelled.');

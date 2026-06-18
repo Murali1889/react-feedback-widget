@@ -20,7 +20,7 @@ import { local, githubIssue } from 'react-visual-feedback/destinations'
 export default defineConfig({
   destinations: [
     local(),          // browser fallback — always safe
-    githubIssue(),    // server env: GH_TOKEN, GH_REPO
+    githubIssue(),    // server env: GITHUB_TOKEN, GITHUB_REPO
   ],
   auth: { mode: 'session' },
   ui:   { variant: 'two-column' },
@@ -40,16 +40,14 @@ import { FeedbackProvider } from 'react-visual-feedback'
 
 ```ts
 // app/api/feedback/[...rest]/route.ts
-import { createFeedbackRouter, FeedbackAuthError } from 'react-visual-feedback/server'
+import { createFeedbackHandler, devSessionAuth } from 'react-visual-feedback/server'
 import feedbackConfig from '@/feedback.config'
-import { getSession } from '@/lib/auth'
 
-export const POST = createFeedbackRouter({
+export const POST = createFeedbackHandler({
   ...feedbackConfig,
-  authorize: async (req) => {
-    const s = await getSession(req); if (!s) throw new FeedbackAuthError()
-    return { userId: s.userId, projectId: s.projectId }
-  },
+  // Dev passes through with a stub session; production refuses without one.
+  // Swap to your real auth (NextAuth / Clerk / your session lib) before shipping.
+  authorize: devSessionAuth(),
 })
 ```
 
@@ -94,16 +92,11 @@ file:///path/to/your/project/node_modules/react-visual-feedback/dist/viewer.html
   ```
   The viewer also picks up `dataSource` when you mount it in your own React app.
 
-## Secure setup in 10 lines (v2.3+)
+## Wiring a single destination by hand (advanced)
 
-```jsx
-// Client (e.g. app/layout.jsx)
-<FeedbackProvider
-  endpoint="/api/feedback/jira"
-  auth={{ mode: 'session' }}   // same-site cookie + auto CSRF
-  redact="default"             // bodies dropped; sensitive headers/keys redacted
-/>
-```
+When you don't want the catch-all router and would rather mount one
+destination handler at one path, use `withSecureDefaults` + the specific
+factory directly:
 
 ```js
 // Server (Next.js App Router: app/api/feedback/jira/route.js)
@@ -123,7 +116,10 @@ export const POST = withSecureDefaults({
 })(createJiraHandler({ projectKey: 'BUG' }));
 ```
 
-This is the **safe** path. `withSecureDefaults` enforces origin allowlist, CSRF check, rate limit, your `authorize` callback, validation, redaction of sensitive headers/keys, and opaque error normalization — all in a fixed order with sane defaults. Read the **[Production Security Checklist](docs/production-security-checklist.md)** before deploying.
+`withSecureDefaults` enforces origin allowlist, CSRF check, rate limit,
+your `authorize` callback, validation, redaction of sensitive headers/keys,
+and opaque error normalization — all in a fixed order with sane defaults.
+Read the **[Production Security Checklist](docs/production-security-checklist.md)** before deploying.
 
 Examples: [Next.js (secure session + anonymous capture)](example-nextjs/), [minimal Express](example-express/).
 

@@ -16,15 +16,15 @@ const FEEDBACK = { feedback: 'pay button broken' };
 let origFetch;
 beforeEach(() => {
   origFetch = global.fetch;
-  process.env.GH_TOKEN = 'srv-tok';
-  process.env.GH_REPO  = 'acme/web';
+  process.env.GITHUB_TOKEN = 'srv-tok';
+  process.env.GITHUB_REPO  = 'acme/web';
   process.env.LINEAR_API_KEY = 'lk';
   process.env.LINEAR_TEAM_ID = 'team-1';
 });
 afterEach(() => {
   global.fetch = origFetch;
-  delete process.env.GH_TOKEN;
-  delete process.env.GH_REPO;
+  delete process.env.GITHUB_TOKEN;
+  delete process.env.GITHUB_REPO;
   delete process.env.LINEAR_API_KEY;
   delete process.env.LINEAR_TEAM_ID;
 });

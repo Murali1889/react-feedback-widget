@@ -90,6 +90,15 @@ const DESTINATIONS = [
     ],
   },
   {
+    id: 'discord', call: 'connect.discord()',
+    blurb: 'post a feedback embed to a Discord channel',
+    secure: 'webhook URL in server env; severity → embed color',
+    envVars: [
+      { k: 'DISCORD_WEBHOOK_URL', hint: 'channel → Integrations → Webhooks → New webhook → Copy URL',
+        url: 'https://support.discord.com/hc/en-us/articles/228383668' },
+    ],
+  },
+  {
     id: 'jira', call: "connect.jira({ project: 'BUG' })",
     blurb: 'create a Jira ticket',
     secure: 'token in server env; severity → priority',
@@ -426,6 +435,9 @@ async function cmdInit(flags = []) {
 
   s.stop('Files written');
 
+  const authNext = parseFlag(flags, 'auth');
+  const authChainValid = authNext && listAuthDestinations().includes(authNext);
+
   if (nonInteractive) {
     console.log('\n  Files written:');
     if (configRes.wrote)    console.log(`  ${paint('✓', c.green)} ${configRes.path}`);
@@ -434,7 +446,22 @@ async function cmdInit(flags = []) {
     else if (routeRes.path) console.log(`  ${paint('·', c.gray)} ${routeRes.path} (already exists)`);
     if (envRes.wrote)       console.log(`  ${paint('✓', c.green)} ${envRes.file} (env stubs appended)`);
     console.log(`\n  ${paint('Done.', c.green)}`);
+    if (authChainValid) {
+      console.log(`\n  ${paint(`→ Chaining: rvf auth ${authNext}`, c.cyan)}\n`);
+      await cmdAuth(authNext, []);
+    } else if (authNext) {
+      console.log(paint(`\n  ! Unknown destination for --auth: ${authNext}. Supported: ${listAuthDestinations().join(', ')}`, c.yellow));
+    }
     return;
+  }
+
+  if (authChainValid) {
+    outro(paint(`Next: connecting ${authNext}…`, c.cyan));
+    await cmdAuth(authNext, []);
+    return;
+  }
+  if (authNext) {
+    log.warn(`Unknown destination for --auth: ${authNext}. Supported: ${listAuthDestinations().join(', ')}`);
   }
 
   // ── Summary ────────────────────────────────────────────────────────────
@@ -551,6 +578,7 @@ async function cmdAuth(name, flags) {
     noOpen: flags.includes('--no-open'),
     token: parseFlag(flags, 'token'),
     printOnly: flags.includes('--print-only'),
+    web: flags.includes('--web'),
     repo: parseFlag(flags, 'repo'),
     domain: parseFlag(flags, 'domain'),
     email: parseFlag(flags, 'email'),
@@ -558,6 +586,110 @@ async function cmdAuth(name, flags) {
   };
   const result = await runAuth({ destination: name, flags: parsed });
   process.exit(result.exitCode);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Interactive menu (`npx rvf` with no args)
+// ───────────────────────────────────────────────────────────────────────────
+
+async function cmdMenu() {
+  const hasConfig = existsSync(join(CWD, 'feedback.config.ts')) ||
+                    existsSync(join(CWD, 'feedback.config.js'));
+
+  intro(paint('react-visual-feedback', c.cyan + c.bold));
+  log.step(hasConfig
+    ? 'Looks like you\'ve run init. What next?'
+    : 'No feedback.config.ts yet — let\'s set things up.');
+
+  const choice = await select({
+    message: 'Pick an action:',
+    initialValue: hasConfig ? 'auth' : 'init',
+    options: hasConfig
+      ? [
+          { value: 'auth',   label: 'auth',   hint: 'connect a destination (github, linear, slack, …)' },
+          { value: 'add',    label: 'add',    hint: 'add a destination to feedback.config.ts' },
+          { value: 'doctor', label: 'doctor', hint: 'show what\'s configured and what\'s missing' },
+          { value: 'list',   label: 'list',   hint: 'browse every supported destination' },
+        ]
+      : [
+          { value: 'init',   label: 'init',   hint: 'scaffold config + route + env stubs (recommended)' },
+          { value: 'list',   label: 'list',   hint: 'browse every supported destination' },
+        ],
+  });
+  if (isCancel(choice)) { cancel('Cancelled.'); return; }
+
+  if (choice === 'init')   { outro(paint('Running init…', c.green)); return cmdInit([]); }
+  if (choice === 'list')   { outro(paint('', c.green)); return cmdList(); }
+  if (choice === 'doctor') { outro(paint('', c.green)); return cmdDoctor(); }
+
+  // 'auth' or 'add' — pick a destination
+  const dest = await select({
+    message: choice === 'auth' ? 'Connect which destination?' : 'Add which destination?',
+    options: listAuthDestinations().map((id) => ({ value: id, label: id })),
+  });
+  if (isCancel(dest)) { cancel('Cancelled.'); return; }
+
+  outro(paint(`Running rvf ${choice} ${dest}…`, c.green));
+  if (choice === 'auth') return cmdAuth(dest, []);
+  return cmdAdd(dest);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// `rvf doctor` — diagnose what's configured
+// ───────────────────────────────────────────────────────────────────────────
+
+function cmdDoctor() {
+  console.log(`\n${paint('━━━ rvf doctor', c.bold + c.cyan)}\n`);
+
+  const configPath = join(CWD, 'feedback.config.ts');
+  const hasConfig = existsSync(configPath);
+  const config = hasConfig ? readFileSync(configPath, 'utf8') : '';
+
+  const envFile = existsSync(join(CWD, '.env.local')) ? '.env.local' : '.env';
+  const envPath = join(CWD, envFile);
+  const env = existsSync(envPath) ? readFileSync(envPath, 'utf8') : '';
+
+  console.log(`  Project root: ${paint(CWD, c.gray)}`);
+  console.log(`  feedback.config.ts: ${hasConfig ? paint('✓ found', c.green) : paint('✗ missing — run `npx rvf init`', c.red)}`);
+  console.log(`  ${envFile}: ${env ? paint('✓ found', c.green) : paint('· missing', c.gray)}`);
+  console.log();
+
+  if (!hasConfig) {
+    console.log(`  ${paint('Next:', c.bold)} ${paint('npx rvf init', c.cyan)}`);
+    console.log();
+    return;
+  }
+
+  console.log(`  ${paint('Destinations in your config:', c.bold)}`);
+  let anyMissing = false;
+  for (const d of DESTINATIONS) {
+    const inConfig = config.includes(d.call.split('(')[0] + '(');
+    if (!inConfig) continue;
+    const needed = d.envVars.map((e) => e.k);
+    // Accept KEY=val, KEY="val", KEY='val', with optional surrounding whitespace
+    const present = needed.filter((k) => new RegExp(`^\\s*${k}\\s*=\\s*(?:"[^"]+"|'[^']+'|\\S+)`, 'm').test(env));
+    const allOk = needed.length === 0 || present.length === needed.length;
+    const sym = allOk ? paint('✓', c.green) : paint('!', c.yellow);
+    const status = needed.length === 0
+      ? paint('no env needed', c.gray)
+      : allOk
+        ? paint(`${present.length}/${needed.length} env vars set`, c.gray)
+        : paint(`${present.length}/${needed.length} env vars set`, c.yellow);
+    console.log(`    ${sym} ${paint(d.id.padEnd(10), c.bold)} ${status}`);
+    if (!allOk) {
+      anyMissing = true;
+      const missing = needed.filter((k) => !present.includes(k));
+      for (const k of missing) console.log(`         ${paint('· ' + k + ' not set', c.gray)}`);
+    }
+  }
+  console.log();
+
+  if (anyMissing) {
+    console.log(`  ${paint('Next:', c.bold)} ${paint('npx rvf auth <destination>', c.cyan)} to fill in missing env vars`);
+  } else {
+    console.log(`  ${paint('All configured destinations have their env vars set ✓', c.green)}`);
+  }
+  console.log();
 }
 
 function cmdList() {
@@ -581,13 +713,24 @@ ${paint('react-visual-feedback CLI', c.cyan + c.bold)}
        ${paint('--destinations=local,github   --variant=two-column   --no-env', c.gray)}
   ${paint('npx rvf add <name>', c.green)}        ${paint('— add a destination to feedback.config.ts', c.gray)}
   ${paint('npx rvf auth <name>', c.green)}       ${paint('— get a token and write env vars (90-150s per destination)', c.gray)}
-       ${paint('--no-open --token=… --print-only --env-file=.env', c.gray)}
+       ${paint('--web (hosted OAuth) --no-open --token=… --print-only --env-file=.env', c.gray)}
        ${paint('supported: ' + listAuthDestinations().join(', '), c.gray)}
   ${paint('npx rvf list', c.green)}              ${paint('— list every available destination', c.gray)}
+  ${paint('npx rvf doctor', c.green)}            ${paint('— diagnose what\'s configured / missing', c.gray)}
   ${paint('npx rvf --help', c.green)}            ${paint('— show this', c.gray)}
+
+  ${paint('Shortcuts:', c.bold)}
+  ${paint('npx rvf', c.green)}                   ${paint('— interactive menu (no args)', c.gray)}
+  ${paint('npx rvf <destination>', c.green)}     ${paint('— alias for `rvf auth <destination>`', c.gray)}
+  ${paint('npx rvf c <destination>', c.green)}   ${paint('— shorter alias for `rvf auth`', c.gray)}
+  ${paint('npx rvf init --auth <name>', c.green)} ${paint('— scaffold + connect in one command', c.gray)}
 
   ${paint('Destinations:', c.bold)} ${DESTINATIONS.map((d) => d.id).join(', ')}
 `;
+}
+
+function isAuthDestination(name) {
+  return listAuthDestinations().includes(name);
 }
 
 const [, , cmd, ...rest] = process.argv;
@@ -595,14 +738,21 @@ const sub = rest[0];
 
 try {
   switch (cmd) {
-    case 'init':   await cmdInit(rest); break;
-    case 'add':    if (!sub) { console.log(helpText()); process.exit(0); } await cmdAdd(sub); break;
-    case 'auth':   await cmdAuth(sub, rest.slice(1)); break;
-    case 'list':   cmdList(); break;
+    case undefined: await cmdMenu(); break;
+    case 'init':    await cmdInit(rest); break;
+    case 'add':     if (!sub) { console.log(helpText()); process.exit(0); } await cmdAdd(sub); break;
+    case 'auth':
+    case 'c':       await cmdAuth(sub, rest.slice(1)); break;
+    case 'list':    cmdList(); break;
+    case 'doctor':  cmdDoctor(); break;
     case '--help':
-    case '-h':
-    case undefined: console.log(helpText()); break;
+    case '-h':      console.log(helpText()); break;
     default:
+      // `rvf <destination>` shortcut for `rvf auth <destination>`
+      if (isAuthDestination(cmd)) {
+        await cmdAuth(cmd, rest);
+        break;
+      }
       console.log(paint(`Unknown command: ${cmd}\n`, c.red));
       console.log(helpText());
       process.exit(1);

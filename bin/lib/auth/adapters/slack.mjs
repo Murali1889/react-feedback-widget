@@ -83,5 +83,5 @@ export default {
     };
   },
 
-  successHint: 'Try: rvf send-test slack',
+  successHint: 'Restart your dev server, press Alt+A, and submit feedback to land in slack.',
 };

@@ -14,13 +14,13 @@ const screenshot = new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: 'image
 let origFetch;
 beforeEach(() => {
   origFetch = global.fetch;
-  process.env.GH_TOKEN = 'tok';
-  process.env.GH_REPO = 'acme/web';
+  process.env.GITHUB_TOKEN = 'tok';
+  process.env.GITHUB_REPO = 'acme/web';
 });
 afterEach(() => {
   global.fetch = origFetch;
-  delete process.env.GH_TOKEN;
-  delete process.env.GH_REPO;
+  delete process.env.GITHUB_TOKEN;
+  delete process.env.GITHUB_REPO;
 });
 
 describe('router + multipart', () => {

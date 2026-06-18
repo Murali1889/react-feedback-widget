@@ -8,7 +8,11 @@
  * docs (June 2026): `name`, `description`, `target_name`, `expires_in`,
  * and per-permission flags (`issues=write`, `metadata=read`).
  */
-import { http } from '../helpers.mjs';
+import { http, openBrowser } from '../helpers.mjs';
+import { findFreePort } from '../google-oauth.mjs';
+import { startWebLoopback } from '../web-loopback.mjs';
+
+const WEBSITE_URL = process.env.RVF_WEBSITE_URL || 'http://localhost:3009';
 
 export default {
   id: 'github',
@@ -77,12 +81,56 @@ export default {
     return { ok: false, message: `GitHub ${r.status}: ${r.body?.message || r.error || 'unknown error'}` };
   },
 
-  envEntries({ token, prereqs }) {
+  envEntries({ token, prereqs, webHandoff }) {
+    if (webHandoff) {
+      const out = {
+        GITHUB_TOKEN: webHandoff.GITHUB_TOKEN,
+      };
+      if (webHandoff.GITHUB_REFRESH_TOKEN) out.GITHUB_REFRESH_TOKEN = webHandoff.GITHUB_REFRESH_TOKEN;
+      if (webHandoff.GITHUB_LOGIN) out.GITHUB_LOGIN = webHandoff.GITHUB_LOGIN;
+      return out;
+    }
     return {
       GITHUB_TOKEN: token,
       GITHUB_REPO: prereqs.repo,
     };
   },
 
-  successHint: 'Try: rvf send-test github',
+  /**
+   * --web mode: bounce through our hosted website's OAuth flow instead
+   * of asking the user to create a fine-grained PAT.
+   */
+  async runWebOAuth({ clack, flags }) {
+    const port = await findFreePort();
+    const callbackUrl = `http://127.0.0.1:${port}/handoff`;
+    const loopback = startWebLoopback({ port, allowedOrigin: WEBSITE_URL });
+
+    const start = `${WEBSITE_URL}/connect/github?callback=${encodeURIComponent(callbackUrl)}`;
+    const opened = openBrowser(start, { skip: flags.noOpen });
+    if (opened) {
+      clack.log.info(`Opened ${start}`);
+    } else {
+      clack.log.info(`Open this URL: ${start}`);
+    }
+
+    const s = clack.spinner();
+    s.start('Waiting for you to finish in the browser…');
+    let payload;
+    try {
+      payload = await loopback.payloadPromise;
+    } catch (e) {
+      s.stop('Handoff failed');
+      await loopback.close();
+      return { ok: false, message: e?.message || String(e) };
+    }
+    await loopback.close();
+    s.stop('Authorization received');
+
+    if (!payload?.GITHUB_TOKEN) {
+      return { ok: false, message: 'Website did not return a GITHUB_TOKEN.' };
+    }
+    return { ok: true, webHandoff: payload };
+  },
+
+  successHint: 'Restart your dev server, press Alt+A, and submit feedback to land in github.',
 };

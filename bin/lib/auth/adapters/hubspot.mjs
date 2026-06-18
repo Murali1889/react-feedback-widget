@@ -122,5 +122,5 @@ export default {
     };
   },
 
-  successHint: 'Try: rvf send-test hubspot',
+  successHint: 'Restart your dev server, press Alt+A, and submit feedback to land in hubspot.',
 };

@@ -143,7 +143,7 @@ export default {
     };
   },
 
-  successHint: 'Try: rvf send-test sheets',
+  successHint: 'Restart your dev server, press Alt+A, and submit feedback to land in sheets.',
 };
 
 function humanizeOAuthError(e) {

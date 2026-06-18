@@ -117,7 +117,7 @@ export default {
     };
   },
 
-  successHint: 'Try: rvf send-test notion',
+  successHint: 'Restart your dev server, press Alt+A, and submit feedback to land in notion.',
 };
 
 /**

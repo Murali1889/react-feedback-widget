@@ -56,9 +56,9 @@ describe('createGithubHandler', () => {
     expect(body.labels).toContain('type:bug');
   });
 
-  it('throws when GH_TOKEN missing', async () => {
+  it('throws when GITHUB_TOKEN missing', async () => {
     const handler = createGithubHandler({});
-    await expect(handler(FEEDBACK, AUTH_CTX)).rejects.toThrow(/GH_TOKEN/);
+    await expect(handler(FEEDBACK, AUTH_CTX)).rejects.toThrow(/GITHUB_TOKEN/);
   });
 
   it('surfaces a github error with status and body', async () => {

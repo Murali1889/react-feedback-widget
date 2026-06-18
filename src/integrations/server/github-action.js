@@ -9,9 +9,9 @@
  * Wrap with withSecureDefaults({ authorize }).
  *
  * Env:
- *   GH_TOKEN          PAT or installation token with `Repository contents: Write`
+ *   GITHUB_TOKEN      PAT or installation token with `Repository contents: Write`
  *                     OR `Actions: Write` on the target repo
- *   GH_REPO           "owner/repo"
+ *   GITHUB_REPO       "owner/repo"
  *   GH_ACTION_EVENT   event_type — default 'feedback'; pick anything,
  *                     just match it in your workflow's on.types
  */
@@ -49,11 +49,11 @@ export function createGithubActionHandler(config = {}) {
   warnIfInsecure(config);
 
   return async (req, res) => {
-    const token = config.token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    const repo = config.repo || process.env.GITHUB_REPO || process.env.GH_REPO;
+    const token = config.token || process.env.GITHUB_TOKEN;
+    const repo = config.repo || process.env.GITHUB_REPO;
     const eventType = config.eventType || process.env.GH_ACTION_EVENT || 'feedback';
     if (!token || !repo) {
-      throw new Error('createGithubActionHandler: missing GH_TOKEN or GH_REPO');
+      throw new Error('createGithubActionHandler: missing GITHUB_TOKEN or GITHUB_REPO (run `npx rvf auth github`)');
     }
 
     if (res && typeof res === 'object' && res.authContext) {

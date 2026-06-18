@@ -6,8 +6,8 @@
  * CSRF / rate-limit / authorize / redaction; this handler just maps the
  * feedback payload onto a GitHub Issues POST.
  *
- * Env: GH_TOKEN (PAT, fine-grained PAT, or App installation token),
- *      GH_REPO ("owner/repo")
+ * Env: GITHUB_TOKEN (PAT, fine-grained PAT, or App installation token),
+ *      GITHUB_REPO ("owner/repo")
  *
  * Typical wiring (Next.js App Router):
  *
@@ -67,10 +67,10 @@ export function createGithubHandler(config = {}) {
   warnIfInsecure(config);
 
   return async (req, res) => {
-    const token = config.token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    const repo = config.repo || process.env.GITHUB_REPO || process.env.GH_REPO;
+    const token = config.token || process.env.GITHUB_TOKEN;
+    const repo = config.repo || process.env.GITHUB_REPO;
     if (!token || !repo) {
-      throw new Error('createGithubHandler: missing GH_TOKEN or GH_REPO');
+      throw new Error('createGithubHandler: missing GITHUB_TOKEN or GITHUB_REPO (run `npx rvf auth github`)');
     }
 
     // Wrapped path: withSecureDefaults invoked us with parsed feedback + ctx.
