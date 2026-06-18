@@ -21,7 +21,8 @@ async function parseWebRequestBody(req, headers) {
   }
   if (ct.includes('multipart/form-data') && typeof req.formData === 'function') {
     // The client adapter (proxyPost) sends a known FormData shape:
-    //   feedback (JSON Blob), screenshot (Blob), video (Blob), attachment (Blob)
+    //   feedback (JSON Blob), screenshot (Blob), video (Blob),
+    //   audio (Blob), attachment (Blob)
     // Reconstruct the original payload so downstream handlers see the same
     // object shape regardless of how the wire format was negotiated.
     try {
@@ -40,6 +41,8 @@ async function parseWebRequestBody(req, headers) {
       if (ss && typeof ss !== 'string') out.screenshot = ss;
       const vid = fd.get('video');
       if (vid && typeof vid !== 'string') out.videoBlob = vid;
+      const aud = fd.get('audio');
+      if (aud && typeof aud !== 'string') out.audioBlob = aud;
       const att = fd.get('attachment');
       if (att && typeof att !== 'string') out.attachment = att;
       return out;

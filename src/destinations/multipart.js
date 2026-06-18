@@ -86,6 +86,15 @@ export function buildMultipartFromPayload(payload) {
     attached += 1;
   }
 
+  // Voice memo from useVoiceRecorder (mic-only audio)
+  const aud = metadata.audioBlob;
+  if (isBlobLike(aud)) {
+    const name = (aud && aud.name) || `voice-memo.${extToMime(aud.type) || 'webm'}`;
+    out.append('audio', aud, name);
+    delete metadata.audioBlob;
+    attached += 1;
+  }
+
   // Arbitrary file attachment
   const att = metadata.attachment;
   if (isBlobLike(att)) {
@@ -103,7 +112,7 @@ export function buildMultipartFromPayload(payload) {
 
 /**
  * Server-side helper — read FormData from a Request and return
- *   { feedback: parsedMetadata, screenshot, video, attachment }
+ *   { feedback: parsedMetadata, screenshot, video, audio, attachment }
  *
  * Lives here (not server-only) because Web Request FormData parsing
  * is isomorphic. The router calls this when content-type is multipart.
@@ -120,7 +129,7 @@ export async function readMultipartRequest(req) {
     else json = await new Response(feedbackField).text();
     try { out.feedback = JSON.parse(json); } catch { out.feedback = {}; }
   }
-  for (const name of ['screenshot', 'video', 'attachment']) {
+  for (const name of ['screenshot', 'video', 'audio', 'attachment']) {
     const part = fd.get(name);
     if (part && typeof part !== 'string') out[name] = part;
   }

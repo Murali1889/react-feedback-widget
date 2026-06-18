@@ -41,6 +41,39 @@ describe('buildMultipartFromPayload', () => {
     expect(fd.get('attachment')).toBeTruthy();
   });
 
+  it('extracts an audioBlob (voice memo) on its own part', () => {
+    const audio = new Blob([new Uint8Array(128)], { type: 'audio/webm' });
+    const fd = buildMultipartFromPayload({ feedback: 'broken', audioBlob: audio });
+    expect(fd).not.toBeNull();
+    const part = fd.get('audio');
+    expect(part).toBeTruthy();
+    expect(part.size).toBe(128);
+  });
+
+  it('audioBlob is removed from the JSON metadata after extraction', async () => {
+    const audio = new Blob([new Uint8Array(16)], { type: 'audio/webm' });
+    const fd = buildMultipartFromPayload({
+      feedback: 'with voice', audioBlob: audio,
+    });
+    const reconstructed = JSON.parse(await fd.get('feedback').text());
+    expect(reconstructed.audioBlob).toBeUndefined();
+    expect(reconstructed.feedback).toBe('with voice');
+  });
+
+  it('bundles screenshot + video + audio + attachment in one multipart payload', () => {
+    const fd = buildMultipartFromPayload({
+      feedback: 'kitchen sink',
+      screenshot: new Blob(['s'], { type: 'image/png' }),
+      videoBlob:  new Blob(['v'], { type: 'video/webm' }),
+      audioBlob:  new Blob(['a'], { type: 'audio/webm' }),
+      attachment: new Blob(['f'], { type: 'application/pdf' }),
+    });
+    expect(fd.get('screenshot')).toBeTruthy();
+    expect(fd.get('video')).toBeTruthy();
+    expect(fd.get('audio')).toBeTruthy();
+    expect(fd.get('attachment')).toBeTruthy();
+  });
+
   it('feedback metadata in the form is the original minus the binaries', async () => {
     const blob = new Blob([new Uint8Array([0xff])], { type: 'image/jpeg' });
     const payload = {
@@ -78,5 +111,16 @@ describe('readMultipartRequest', () => {
     expect(parsed.screenshot).toBeTruthy();
     expect(parsed.screenshot.size).toBeGreaterThan(0);
     expect(parsed.video).toBeUndefined();
+    expect(parsed.audio).toBeUndefined();
+  });
+
+  it('round-trips an audio voice memo through build → read', async () => {
+    const audio = new Blob([new Uint8Array(64)], { type: 'audio/webm' });
+    const fd = buildMultipartFromPayload({ feedback: 'note', audioBlob: audio });
+    const req = new Request('http://localhost/api/feedback/github', { method: 'POST', body: fd });
+    const parsed = await readMultipartRequest(req);
+    expect(parsed.audio).toBeTruthy();
+    expect(parsed.audio.size).toBe(64);
+    expect(parsed.feedback.feedback).toBe('note');
   });
 });
