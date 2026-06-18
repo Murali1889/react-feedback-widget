@@ -27,6 +27,7 @@ const feedbackConfig = defineConfig({
     connect.supabase(),                    // env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
     connect.hubspot(),                     // env: HUBSPOT_TOKEN
     connect.slack({ channel: '#bugs' }),   // env: SLACK_WEBHOOK_URL or SLACK_BOT_TOKEN+SLACK_CHANNEL
+    connect.discord(),                     // env: DISCORD_WEBHOOK_URL
   ],
   auth:   { mode: 'session' },
   redact: 'default',

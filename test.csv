@@ -36,7 +36,7 @@ G2,Persistence,Audio metadata,audioBlob non-empty after voice memo,SKIP,"Mic per
 G3,Persistence,50-item cap,Only last 50 items kept,PASS,"src/lib/feedbackStorage.js: MAX_HISTORY=50; slice(0,MAX_HISTORY)"
 H1,Backend,Catch-all dispatch,POST /api/feedback/<dest> reaches handler,PASS,"github/linear/notion/supabase/hubspot/slack: all return 502 (reached handler)"
 H2,Backend,CSRF rejects mismatch,Wrong x-csrf-token returns 403,PASS,"curl with mismatched csrf → 403 csrf_failed"
-H3,Backend,Discord routed,Discord destination registered,FAIL,"Example app's catch-all returns 404 unknown_destination because example was built before discord landed in DEFAULT_HANDLER_MAP. Library has it correctly; example app needs `rm -rf .next && npm run dev` to rebuild."
+H3,Backend,Discord routed,Discord destination registered,PASS,"After adding connect.discord() to example feedback.config.ts: 502 integration_failed (= reached createDiscordHandler, no DISCORD_WEBHOOK_URL expected)"
 H4,Backend,Slack routed,Slack destination registered,PASS,"curl /api/feedback/slack → 502 (handler reached)"
 H5,Backend,Hubspot routed,Hubspot registered,PASS,"curl /api/feedback/hubspot → 502 (handler reached)"
 H6,Backend,Unauthorized without session,No demo-session cookie → 401,PASS,"401 unauthorized"
@@ -47,4 +47,4 @@ J2,CLI,rvf doctor in empty dir,Flags missing feedback.config.ts,PASS,"'feedback.
 J3,CLI,rvf doctor quoted env values,KEY=\"value\" recognized,PASS,"Doctor runs cleanly with quoted env"
 J4,CLI,rvf init writes safe imports,Generated feedback.config.ts uses /config and /destinations,PASS,"head shows: 'from \"react-visual-feedback/config\"' and 'from \"react-visual-feedback/destinations\"'"
 J5,CLI,rvf auth supabase prompts,Adapter shows correct checklist + token URL,PASS,"Output shows: '1. Open supabase.com → Account → Access Tokens', token URL printed"
-SUMMARY,Totals,,Tests: 47 · PASS: 44 · FAIL: 2 (C5 synthetic-drag test-env limitation; H3 example-app rebuild needed) · SKIP: 1 (G2 mic perm in test env),,
+SUMMARY,Totals,,Tests: 47 · PASS: 45 · FAIL: 1 (C5 synthetic-drag test-env limitation only — real drop works) · SKIP: 1 (G2 mic perm),,
