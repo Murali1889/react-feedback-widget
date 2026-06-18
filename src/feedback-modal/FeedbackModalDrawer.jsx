@@ -139,7 +139,7 @@ export const FeedbackModalDrawer = (props) => {
           <EvidenceBand>
             <EmptyMedia onClick={() => s.screenshotInputRef.current?.click()}>
               <Image size={14} /> Attach screenshot or video
-              <input type="file" ref={s.screenshotInputRef} accept="image/*,video/*" style={{display:'none'}} onChange={(e) => s.handleFile(e.target.files[0])} />
+              <input type="file" ref={s.screenshotInputRef}  style={{display:'none'}} onChange={(e) => s.handleFile(e.target.files[0])} />
             </EmptyMedia>
           </EvidenceBand>
         )}

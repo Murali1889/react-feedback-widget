@@ -1,11 +1,12 @@
 import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styled, { ThemeProvider, keyframes, css } from 'styled-components';
-import { X, Send, Trash2, Image as ImageIcon, FileCode, Sparkles, MessageSquare } from 'lucide-react';
+import { X, Send, Trash2, Image as ImageIcon, FileCode, Sparkles, MessageSquare, Mic, Square, Paperclip } from 'lucide-react';
 import { getTheme } from '../theme.js';
 import {
   useFeedbackModalState, FEEDBACK_TYPES, PRIORITY_OPTIONS, DEFAULT_SUGGESTED_LABELS,
 } from './useFeedbackModalState.js';
+import { useVoiceRecorder } from './useVoiceRecorder.js';
 import {
   fadeIn, FieldLabel, FieldRow, TextArea, PillRow, Pill,
   SubmitButton, CloseX, ZoomedBackdrop,
@@ -130,6 +131,7 @@ const Subtitle = styled.div`
 /* ----- responsive grid ----- */
 
 const Body = styled.div`
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 340px;
   flex: 1;
@@ -142,6 +144,54 @@ const Body = styled.div`
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
     overflow-y: auto;
+  }
+`;
+
+const DropOverlay = styled.div`
+  position: absolute;
+  inset: 8px;
+  border-radius: 14px;
+  border: 2px dashed ${p => p.theme.colors.accent || '#60a5fa'};
+  background: ${p => p.theme.mode === 'dark' ? 'rgba(96,165,250,0.10)' : 'rgba(96,165,250,0.14)'};
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px;
+  color: ${p => p.theme.colors.text};
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 30;
+`;
+
+const EvidenceActions = styled.div`
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+`;
+
+const ActionBtn = styled.button`
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 11px;
+  background: ${p => p.$active ? '#dc2626' : (p.theme.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)')};
+  border: 1px solid ${p => p.$active ? '#dc2626' : (p.theme.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')};
+  color: ${p => p.$active ? '#fff' : p.theme.colors.text};
+  border-radius: 8px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  &:hover { filter: brightness(1.1); }
+`;
+
+const AttachmentChip = styled.div`
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; margin-top: 10px;
+  background: ${p => p.theme.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
+  border: 1px solid ${p => p.theme.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};
+  border-radius: 6px;
+  font-size: 12px;
+  color: ${p => p.theme.colors.text};
+  max-width: 100%;
+
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+  .size { opacity: 0.6; font-variant-numeric: tabular-nums; }
+  button {
+    background: none; border: none; color: inherit; opacity: 0.6; cursor: pointer; padding: 0;
+    &:hover { opacity: 1; color: #dc2626; }
   }
 `;
 
@@ -400,7 +450,17 @@ export const FeedbackModalTwoColumn = (props) => {
   const { isOpen, onClose, elementInfo, screenshot, videoBlob, eventLogs, mode = 'light' } = props;
   const theme = getTheme(mode);
   const s = useFeedbackModalState(props);
+  const voice = useVoiceRecorder({ maxMs: 90_000 });
   const videoRef = useRef(null);
+
+  const toggleVoice = async () => {
+    if (voice.isRecording) {
+      const blob = await voice.stop();
+      if (blob) s.setManualAudio(blob);
+    } else {
+      try { await voice.start(); } catch { /* permission denied — error surfaced via voice.error */ }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -426,13 +486,28 @@ export const FeedbackModalTwoColumn = (props) => {
           <CloseX onClick={onClose} aria-label="Close"><X size={18} /></CloseX>
         </Header>
 
-        <Body>
+        <Body
+          onDragEnter={s.handleDragEnter}
+          onDragOver={s.handleDragOver}
+          onDragLeave={s.handleDragLeave}
+          onDrop={s.handleDrop}
+        >
+          {s.isDraggingOver && (
+            <DropOverlay>
+              <Paperclip size={26} strokeWidth={1.5} />
+              Drop to attach
+              <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.7 }}>
+                screenshots, video, audio, PDFs, logs — anything you have
+              </span>
+            </DropOverlay>
+          )}
           <FormCol>
             <FieldRow>
               <FieldLabel htmlFor="tc-desc">What's on your mind?</FieldLabel>
               <TextArea id="tc-desc" ref={s.descriptionRef}
-                placeholder="Describe what you saw, what you expected, how to reproduce…"
+                placeholder="Describe what you saw, what you expected, how to reproduce… (or paste a screenshot)"
                 value={s.description} onChange={(e) => s.setDescription(e.target.value)}
+                onPaste={s.handlePaste}
                 disabled={s.isSubmitting} style={{ minHeight: 130 }} />
             </FieldRow>
 
@@ -486,11 +561,11 @@ export const FeedbackModalTwoColumn = (props) => {
             ) : (
               <EmptyMedia onClick={() => s.screenshotInputRef.current?.click()}>
                 <ImageIcon className="empty-icon" size={28} strokeWidth={1.5} />
-                Attach a screenshot or video
+                Drop · paste · or click to attach
                 <span style={{ fontSize: 11, opacity: 0.7 }}>
-                  PNG · JPG · MP4 · WebM
+                  Screenshots, video, audio, PDF, logs — anything
                 </span>
-                <input type="file" ref={s.screenshotInputRef} accept="image/*,video/*"
+                <input type="file" ref={s.screenshotInputRef}
                   style={{ display: 'none' }}
                   onChange={(e) => s.handleFile(e.target.files[0])} />
               </EmptyMedia>
@@ -498,6 +573,41 @@ export const FeedbackModalTwoColumn = (props) => {
 
             {s.activeMedia && !s.activeImage && (
               <TimelineScrubber events={eventLogs || []} videoRef={videoRef} />
+            )}
+
+            <EvidenceActions>
+              <ActionBtn type="button" onClick={() => s.screenshotInputRef.current?.click()}>
+                <Paperclip size={13} /> Attach
+              </ActionBtn>
+              <ActionBtn type="button" onClick={toggleVoice} $active={voice.isRecording}
+                title={voice.error ? 'Microphone access denied' : 'Record a voice memo'}>
+                {voice.isRecording ? <Square size={13} /> : <Mic size={13} />}
+                {voice.isRecording
+                  ? `Stop · ${Math.floor(voice.elapsedMs / 1000)}s`
+                  : 'Voice memo'}
+              </ActionBtn>
+            </EvidenceActions>
+
+            {s.manualAudio && (
+              <AttachmentChip>
+                <Mic size={13} />
+                <span className="name">{s.manualAudio.name || 'voice-memo.webm'}</span>
+                <span className="size">{Math.max(1, Math.round((s.manualAudio.size || 0) / 1024))}KB</span>
+                <button type="button" onClick={() => s.setManualAudio(null)} title="Remove voice memo">
+                  <Trash2 size={12} />
+                </button>
+              </AttachmentChip>
+            )}
+
+            {s.manualFile && (
+              <AttachmentChip>
+                <Paperclip size={13} />
+                <span className="name">{s.manualFile.name || 'attachment'}</span>
+                <span className="size">{Math.max(1, Math.round((s.manualFile.size || 0) / 1024))}KB</span>
+                <button type="button" onClick={() => s.handleFile(null)} title="Remove attachment">
+                  <Trash2 size={12} />
+                </button>
+              </AttachmentChip>
             )}
 
             {source && (

@@ -640,7 +640,7 @@ export const FeedbackModal = ({
                 <input
                   type="file"
                   ref={screenshotInputRef}
-                  accept="image/*,video/*"
+                  
                   style={{display:'none'}}
                   onChange={(e) => handleFile(e.target.files[0])}
                 />

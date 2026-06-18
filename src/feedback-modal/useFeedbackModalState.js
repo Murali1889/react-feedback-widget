@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const FEEDBACK_TYPES = [
   { id: 'bug', label: 'Bug' },
@@ -46,14 +46,18 @@ export function useFeedbackModalState({
   const [manualScreenshot, setManualScreenshot] = useState(manualScreenshotProp);
   const [manualVideo, setManualVideo] = useState(manualVideoProp);
   const [manualFile, setManualFile] = useState(manualFileProp);
+  const [manualAudio, setManualAudio] = useState(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [zoomedImage, setZoomedImage] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
   const [selectedIntegrations, setSelectedIntegrations] = useState({
     local: true, jira: false, sheets: false,
   });
 
   const descriptionRef = useRef(null);
   const screenshotInputRef = useRef(null);
+  const dragCounterRef = useRef(0); // dragenter/dragleave fire on children too
 
   useEffect(() => {
     let url = null;
@@ -62,6 +66,13 @@ export function useFeedbackModalState({
     setVideoUrl(url);
     return () => { if (url) URL.revokeObjectURL(url); };
   }, [videoBlob, manualVideo]);
+
+  useEffect(() => {
+    let url = null;
+    if (manualAudio) url = URL.createObjectURL(manualAudio);
+    setAudioUrl(url);
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [manualAudio]);
 
   useEffect(() => {
     if (isOpen) {
@@ -73,7 +84,10 @@ export function useFeedbackModalState({
       setManualScreenshot(null);
       setManualVideo(null);
       setManualFile(null);
+      setManualAudio(null);
+      setIsDraggingOver(false);
       setZoomedImage(null);
+      dragCounterRef.current = 0;
       setSelectedIntegrations({ local: true, jira: false, sheets: false });
       setTimeout(() => descriptionRef.current?.focus(), 150);
     }
@@ -87,19 +101,86 @@ export function useFeedbackModalState({
     setSelectedIntegrations((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleFile = (file) => {
-    if (!file) return;
-    setManualScreenshot(null); setManualVideo(null); setManualFile(null);
-    if (file.type.startsWith('image/')) {
+  /**
+   * Route any file (from picker, paste, drop, mic) into the right slot.
+   * Audio gets its own slot so voice memos coexist with screenshots.
+   * Last-write-wins per slot.
+   */
+  const handleFile = useCallback((file) => {
+    if (!file) {
+      setManualScreenshot(null);
+      setManualVideo(null);
+      setManualFile(null);
+      setManualAudio(null);
+      return;
+    }
+    const type = file.type || '';
+    if (type.startsWith('image/')) {
       const r = new FileReader();
       r.onloadend = () => setManualScreenshot(r.result);
       r.readAsDataURL(file);
-    } else if (file.type.startsWith('video/')) {
+    } else if (type.startsWith('video/')) {
       setManualVideo(file);
+    } else if (type.startsWith('audio/')) {
+      setManualAudio(file);
     } else {
       setManualFile(file);
     }
-  };
+  }, []);
+
+  /**
+   * Extract any image (and other binary) from clipboard items and route
+   * to handleFile. Returns true if anything was intercepted so the host
+   * can preventDefault to skip the text-paste default.
+   */
+  const handlePaste = useCallback((event) => {
+    const items = event?.clipboardData?.items;
+    if (!items || !items.length) return false;
+    let intercepted = false;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind !== 'file') continue;
+      const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
+      if (!file) continue;
+      handleFile(file);
+      intercepted = true;
+    }
+    if (intercepted && typeof event.preventDefault === 'function') event.preventDefault();
+    return intercepted;
+  }, [handleFile]);
+
+  const handleDragEnter = useCallback((event) => {
+    if (!event?.dataTransfer?.types?.includes?.('Files')) return;
+    event.preventDefault();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) setIsDraggingOver(true);
+  }, []);
+
+  const handleDragOver = useCallback((event) => {
+    if (!event?.dataTransfer?.types?.includes?.('Files')) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDragLeave = useCallback((event) => {
+    if (!event?.dataTransfer?.types?.includes?.('Files')) return;
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setIsDraggingOver(false);
+  }, []);
+
+  const handleDrop = useCallback((event) => {
+    const files = event?.dataTransfer?.files;
+    if (!files || !files.length) {
+      setIsDraggingOver(false);
+      dragCounterRef.current = 0;
+      return false;
+    }
+    event.preventDefault();
+    for (let i = 0; i < files.length; i++) handleFile(files[i]);
+    setIsDraggingOver(false);
+    dragCounterRef.current = 0;
+    return true;
+  }, [handleFile]);
 
   const handleSubmit = () => {
     if (!description.trim() || isSubmitting) return;
@@ -110,6 +191,7 @@ export function useFeedbackModalState({
       labels,
       screenshot: screenshot || manualScreenshot,
       videoBlob: videoBlob || manualVideo,
+      audioBlob: manualAudio,
       attachment: manualFile,
       eventLogs: eventLogs || [],
       timestamp: new Date().toISOString(),
@@ -138,10 +220,14 @@ export function useFeedbackModalState({
     priority, setPriority,
     labels, toggleLabel,
     selectedIntegrations, toggleIntegration,
-    manualScreenshot, manualVideo, manualFile,
+    manualScreenshot, manualVideo, manualFile, manualAudio,
+    setManualAudio,
     handleFile,
+    handlePaste,
+    handleDragEnter, handleDragOver, handleDragLeave, handleDrop,
+    isDraggingOver,
     zoomedImage, setZoomedImage,
-    videoUrl,
+    videoUrl, audioUrl,
     isSubmitting,
     activeMedia, activeImage,
     descriptionRef,

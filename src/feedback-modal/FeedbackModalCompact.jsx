@@ -147,7 +147,7 @@ export const FeedbackModalCompact = (props) => {
               ) : (
                 <EmptyMedia onClick={() => s.screenshotInputRef.current?.click()}>
                   <Image size={12} /> Attach
-                  <input type="file" ref={s.screenshotInputRef} accept="image/*,video/*" style={{display:'none'}} onChange={(e) => s.handleFile(e.target.files[0])} />
+                  <input type="file" ref={s.screenshotInputRef}  style={{display:'none'}} onChange={(e) => s.handleFile(e.target.files[0])} />
                 </EmptyMedia>
               )}
 
