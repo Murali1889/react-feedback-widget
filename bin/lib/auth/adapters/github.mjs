@@ -11,8 +11,13 @@
 import { http, openBrowser } from '../helpers.mjs';
 import { findFreePort } from '../google-oauth.mjs';
 import { startWebLoopback } from '../web-loopback.mjs';
+import { randomBytes } from 'node:crypto';
 
-const WEBSITE_URL = process.env.RVF_WEBSITE_URL || 'http://localhost:3009';
+// Pinned at publish time. Dev users explicitly set RVF_WEBSITE_URL.
+// Defaulting to a localhost URL would let any other dev server the user
+// happens to be running pass our loopback CORS check.
+const PROD_WEBSITE_URL = 'https://rvf.dev';
+const WEBSITE_URL = process.env.RVF_WEBSITE_URL || PROD_WEBSITE_URL;
 
 export default {
   id: 'github',
@@ -102,8 +107,10 @@ export default {
    */
   async runWebOAuth({ clack, flags }) {
     const port = await findFreePort();
-    const callbackUrl = `http://127.0.0.1:${port}/handoff`;
-    const loopback = startWebLoopback({ port, allowedOrigin: WEBSITE_URL });
+    const handoffSecret = randomBytes(32).toString('hex');
+    const handoffPath = `/handoff/${handoffSecret}`;
+    const callbackUrl = `http://127.0.0.1:${port}${handoffPath}`;
+    const loopback = startWebLoopback({ port, allowedOrigin: WEBSITE_URL, path: handoffPath });
 
     const start = `${WEBSITE_URL}/connect/github?callback=${encodeURIComponent(callbackUrl)}`;
     const opened = openBrowser(start, { skip: flags.noOpen });

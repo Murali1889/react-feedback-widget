@@ -490,6 +490,26 @@ export function createSheetsHandler(config = {}) {
       return { data: result };
     }
 
+    // Raw path — no withSecureDefaults wrapper. In production this means
+    // the handler is exposed without origin/CSRF/authorize checks, AND
+    // the OAuth exchange-code action is a token-injection magnet
+    // (an attacker who can hit this endpoint logs THEIR refresh token
+    // into the host's storage). Refuse in production unless the caller
+    // explicitly opts in.
+    if (typeof process !== 'undefined' &&
+        process.env?.NODE_ENV === 'production' &&
+        !config.__allowUnwrappedInProd) {
+      const status = 403;
+      const errorBody = {
+        success: false,
+        error: 'createSheetsHandler refused: unwrapped invocation in production. Wrap with withSecureDefaults({ authorize }), or pass __allowUnwrappedInProd: true if you really mean it.',
+      };
+      if (res?.json) { res.status(status).json(errorBody); return; }
+      return new Response(JSON.stringify(errorBody), {
+        status, headers: { 'content-type': 'application/json' },
+      });
+    }
+
     try {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       const { action = 'append', feedbackData, feedbackId, status, row } = body;
@@ -522,7 +542,9 @@ export function createSheetsHandler(config = {}) {
           result = await client.ensureHeaders(headers);
           break;
 
-        // OAuth specific actions
+        // OAuth specific actions — only meaningful for the legacy
+        // callback-style OAuth client. Refuse when the request didn't
+        // come through withSecureDefaults to prevent token injection.
         case 'getAuthUrl':
           if (!(client instanceof SheetsOAuthClient)) {
             throw new Error('OAuth not configured');

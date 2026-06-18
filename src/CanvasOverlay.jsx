@@ -228,8 +228,9 @@ export const CanvasOverlay = ({ isActive, onComplete, onCancel, mode = 'light' }
     if (!canvasRef.current) return;
 
     try {
-      // Import html2canvas dynamically
+      // Import html2canvas + PII redaction dynamically
       const html2canvas = (await import('html2canvas')).default;
+      const { maskPiiInClonedDoc } = await import('./lib/screenshot-redaction.js');
       const canvas = canvasRef.current;
 
       // Capture the entire visible page with drawings
@@ -244,7 +245,10 @@ export const CanvasOverlay = ({ isActive, onComplete, onCancel, mode = 'light' }
         scrollY: 0,
         useCORS: true,
         allowTaint: true,
-        logging: false
+        logging: false,
+        // Mask passwords / cc-* fields / data-feedback-redact in the
+        // cloned DOM before render. The live page is untouched.
+        onclone: (clonedDoc) => maskPiiInClonedDoc(clonedDoc),
       });
 
       // Create combined canvas with page + drawings

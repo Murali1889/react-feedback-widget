@@ -28,10 +28,16 @@ export const OAUTH_STATE_SECRET = process.env.OAUTH_STATE_SECRET || '';
 
 export const GITHUB_OAUTH_SCOPE = 'repo';
 
-export function credentialsConfigured(): { ok: boolean; missing: string[] } {
+const MIN_STATE_SECRET_LEN = 32;
+
+export function credentialsConfigured(): { ok: boolean; missing: string[]; weak: string[] } {
   const missing: string[] = [];
+  const weak: string[] = [];
   if (!GITHUB_OAUTH_CLIENT_ID) missing.push('GITHUB_OAUTH_CLIENT_ID');
   if (!GITHUB_OAUTH_CLIENT_SECRET) missing.push('GITHUB_OAUTH_CLIENT_SECRET');
   if (!OAUTH_STATE_SECRET) missing.push('OAUTH_STATE_SECRET');
-  return { ok: missing.length === 0, missing };
+  // A short HMAC secret produces a guess-able (or empty-key-deterministic)
+  // signature. Require at least 32 chars — 16 random bytes hex-encoded.
+  else if (OAUTH_STATE_SECRET.length < MIN_STATE_SECRET_LEN) weak.push('OAUTH_STATE_SECRET');
+  return { ok: missing.length === 0 && weak.length === 0, missing, weak };
 }

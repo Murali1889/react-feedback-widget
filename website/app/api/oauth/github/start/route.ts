@@ -23,7 +23,14 @@ export async function GET(req: NextRequest) {
   const config = credentialsConfigured();
   if (!config.ok) {
     return NextResponse.json(
-      { error: 'oauth_unconfigured', missing: config.missing },
+      {
+        error: 'oauth_unconfigured',
+        missing: config.missing,
+        weak: config.weak,
+        hint: config.weak.includes('OAUTH_STATE_SECRET')
+          ? 'OAUTH_STATE_SECRET must be at least 32 chars — generate with `node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"`'
+          : undefined,
+      },
       { status: 500 }
     );
   }
