@@ -65,6 +65,27 @@ export async function saveFeedbackToLocalStorage(feedbackData) {
       delete processedData.video;
     }
 
+    // File/Blob attachments aren't JSON-serializable — JSON.stringify
+    // silently turns them into `{}`. Persist the metadata so the
+    // dashboard can at least show "📎 invoice.pdf (245KB)" instead of
+    // nothing. Same for voice-memo audio blobs.
+    if (feedbackData.attachment && feedbackData.attachment instanceof Blob) {
+      processedData.attachment = {
+        name: feedbackData.attachment.name || 'attachment',
+        size: feedbackData.attachment.size,
+        type: feedbackData.attachment.type || 'application/octet-stream',
+        persistedAt: new Date().toISOString(),
+      };
+    }
+    if (feedbackData.audioBlob && feedbackData.audioBlob instanceof Blob) {
+      processedData.audioBlob = {
+        name: feedbackData.audioBlob.name || 'voice-memo.webm',
+        size: feedbackData.audioBlob.size,
+        type: feedbackData.audioBlob.type || 'audio/webm',
+        persistedAt: new Date().toISOString(),
+      };
+    }
+
     const newFeedback = {
       id: feedbackId,
       ...processedData,

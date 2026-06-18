@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.3.2] — 2026-06-18
+
+Driven by a live end-to-end Chrome test pass (47 cases, see test.csv).
+
+### Fixed
+- **Attachments lost in localStorage.** Before: `File` objects went through `JSON.stringify` and became `{}` — the dashboard had no idea what was attached. Now: `feedbackStorage` extracts `{name, size, type, persistedAt}` before persisting, matching what already happens for `videoBlob`. Same for `audioBlob` voice memos.
+- **Dashboard attachment chip + audio chip render.** `EvidenceStack` header now shows `📎 invoice.pdf 14B` and `voice memo` inline next to the other chips.
+
+### Changed — dashboard is 2-column
+The 3rd "Workflow" column wasted ~30-40% of viewport on text-only feedback. Merged into the detail panel:
+- Status / Severity / Owner are inline chips at the **top** of the detail header (clickable to edit when the host wires `onStatusChange` etc.).
+- `Copy as…` + `Delete` moved to a sticky **footer** of the detail panel.
+- Title gets full panel width; long descriptions don't wrap awkwardly anymore.
+- Two breakpoints: 1024px stays 2-col with narrower list; 768px collapses to single-col scroll.
+
+### CLI
+- `npx rvf auth supabase` now offers to **auto-run the `CREATE TABLE` migration** through Supabase's Management API right after we fetch the project keys. Idempotent (`create table if not exists`). If the API call fails, the env vars still get written and we surface the SQL inline so users can run it manually — `docs/SUPABASE_SETUP.md` stays as the canonical fallback.
+
+### Live-tested
+47/47 categories exercised in a real Chrome session against the example Next.js app — see `test.csv` at repo root for per-test results. Notable confirmation: CSRF fix from 2.3.1 verified live (server destinations went from `403 csrf_failed` → `502 integration_failed` once cookies + matching header round-trip).
+
 ## [2.3.1] — 2026-06-18
 
 Same-day fix. Live Chrome end-to-end test of 2.3.0 caught a CSRF bug

@@ -80,6 +80,67 @@ export default {
     };
   },
 
+  /**
+   * Auto-run the CREATE TABLE migration through Supabase's Management API
+   * (POST /v1/projects/{ref}/database/query) right after we pick the
+   * project. Idempotent — `create table if not exists` so re-running is
+   * safe. If anything goes wrong we surface a clear "run the SQL from
+   * docs/SUPABASE_SETUP.md manually" hint and continue; auth + env-var
+   * write still complete so the user isn't stuck.
+   */
+  async postKeys({ clack, token, project }) {
+    const sql = [
+      'create extension if not exists pgcrypto;',
+      `create table if not exists public.feedback (
+        id         uuid primary key default gen_random_uuid(),
+        payload    jsonb not null,
+        origin     text,
+        created_at timestamptz not null default now()
+      );`,
+      'alter table public.feedback enable row level security;',
+      'create index if not exists feedback_created_at_idx on public.feedback (created_at desc);',
+      "create index if not exists feedback_payload_severity_idx on public.feedback ((payload->>'severity'));",
+      "create index if not exists feedback_payload_type_idx on public.feedback ((payload->>'type'));",
+    ].join('\n');
+
+    const ms = clack.spinner();
+    ms.start('Creating feedback table…');
+    const r = await http(`https://api.supabase.com/v1/projects/${project.id}/database/query`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ query: sql }),
+    });
+    if (r.ok) {
+      ms.stop('Created `feedback` table + RLS + indexes');
+      return { migrationApplied: true };
+    }
+    // Don't fail the auth flow — table creation is recoverable.
+    ms.stop('Couldn\'t auto-create the table');
+    clack.log.warn(
+      `Supabase ${r.status}: ${r.body?.message || r.error || 'migration query failed'}`
+    );
+    clack.note(
+      [
+        'No worries — the env vars are written. Run this once in your',
+        'Supabase SQL Editor (or copy from docs/SUPABASE_SETUP.md):',
+        '',
+        'create extension if not exists pgcrypto;',
+        'create table if not exists public.feedback (',
+        '  id uuid primary key default gen_random_uuid(),',
+        '  payload jsonb not null, origin text,',
+        '  created_at timestamptz not null default now()',
+        ');',
+        'alter table public.feedback enable row level security;',
+      ].join('\n'),
+      'Manual fallback'
+    );
+    return { migrationApplied: false };
+  },
+
   envEntries({ projectKeys }) {
     return {
       SUPABASE_URL: projectKeys.url,
