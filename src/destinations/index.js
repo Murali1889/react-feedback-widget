@@ -22,8 +22,12 @@
 export { local } from './adapters/local.js';
 export { webhook, webhookProxied } from './adapters/webhook.js';
 export { supabasePublic, supabaseProxied } from './adapters/supabase.js';
-export { linearIssue, githubIssue, githubAction, notionDb } from './adapters/issue-trackers.js';
+export { linearIssue, githubIssue, githubAction, notionDb, hubspot, slack, discord } from './adapters/issue-trackers.js';
 export { cloud } from './adapters/cloud.js';
+
+// `connect` namespace — also re-exported from the root entry, but importing
+// from /destinations is server-safe (no React, no html2canvas).
+export { connect } from './connect.js';
 
 export {
   assertNoPrivateCredentials,

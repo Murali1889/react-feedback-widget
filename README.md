@@ -1,96 +1,116 @@
-# React Visual Feedback
+# react-visual-feedback
 
-**[Live Demo](https://react-library-demo-rosy.vercel.app/)** · **[Quickstart](./docs/QUICKSTART.md)** · **[Integration Guide](./docs/INTEGRATION.md)** · **[Architecture Diagram](./docs/architecture.html)** · **[AI Agent Guide](./AGENTS.md)**
+**[Live demo](https://react-library-demo-rosy.vercel.app/)** · [Quickstart](./docs/QUICKSTART.md) · [Integration Guide](./docs/INTEGRATION.md) · [AI Agent Guide](./AGENTS.md)
 
-Drop-in React widget that captures bug reports with screenshots, screen-recordings with synced event timelines, console/network/storage traces, React component state, and source-map–resolved file:line locations — then fans the submission out to GitHub Issues, Linear, Notion, Jira, Sheets, Supabase, your webhook, or our hosted cloud, all in parallel. Browser never holds a private credential.
+Drop-in React widget. Press `Alt+A`, click on a broken element, type what's wrong, hit send — a fully-contexted bug report (screenshot, screen-recording, voice memo, console/network/storage traces, React component state, source-mapped `file:line`) lands in GitHub Issues / Linear / Slack / Discord / Notion / HubSpot / Sheets / Supabase / Jira / your webhook. The browser never holds a private credential.
 
-## 60-second integration
+---
+
+## ⚡ Integrate in 3 minutes — one command
 
 ```bash
-npm install react-visual-feedback
+npx rvf init --auth github
 ```
 
-**One config file**, both sides import it:
+That single command:
+1. Detects your framework — Next.js (App / Pages Router), Vite, Express
+2. Writes `feedback.config.ts`
+3. Writes the catch-all API route (`app/api/feedback/[...rest]/route.ts` on Next App Router)
+4. Opens GitHub's fine-grained PAT page **with the right scope pre-selected**, you click "Generate"
+5. Writes `GITHUB_TOKEN` + `GITHUB_REPO` to `.env.local`
 
-```ts
-// feedback.config.ts   ← single source of truth
-import { defineConfig } from 'react-visual-feedback/config'
-import { local, githubIssue } from 'react-visual-feedback/destinations'
-
-export default defineConfig({
-  destinations: [
-    local(),          // browser fallback — always safe
-    githubIssue(),    // server env: GITHUB_TOKEN, GITHUB_REPO
-  ],
-  auth: { mode: 'session' },
-  ui:   { variant: 'two-column' },
-})
-```
-
-**Browser** — one line:
+Then add **one line** to your root layout — paste the snippet the CLI prints:
 
 ```tsx
-import feedbackConfig from '@/feedback.config'
+// app/layout.tsx
+import feedbackConfig from './feedback.config'
 import { FeedbackProvider } from 'react-visual-feedback'
 
-<FeedbackProvider {...feedbackConfig}>{children}</FeedbackProvider>
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <FeedbackProvider {...feedbackConfig}>{children}</FeedbackProvider>
+      </body>
+    </html>
+  )
+}
 ```
 
-**Server** — one catch-all route (auto-dispatches to the right handler):
+Restart your dev server. Press **`Alt+A`** to file your first feedback. Done.
 
-```ts
-// app/api/feedback/[...rest]/route.ts
-import { createFeedbackHandler, devSessionAuth } from 'react-visual-feedback/server'
-import feedbackConfig from '@/feedback.config'
+> **Other destinations** — swap `github` for any of: `linear`, `slack`, `discord`, `notion`, `hubspot`, `sheets`, `supabase`, `jira`. Or run `npx rvf` with no args for an interactive menu.
 
-export const POST = createFeedbackHandler({
-  ...feedbackConfig,
-  // Dev passes through with a stub session; production refuses without one.
-  // Swap to your real auth (NextAuth / Clerk / your session lib) before shipping.
-  authorize: devSessionAuth(),
-})
+---
+
+## 🤖 For AI agents
+
+Verbatim instructions an LLM coding assistant can follow:
+
+```text
+Task: integrate react-visual-feedback into this React project.
+
+Step 1. Run from the project root:
+        npx rvf init --auth github --yes
+
+Step 2. Open the file that wraps the app (app/layout.tsx for Next App
+        Router, src/main.tsx for Vite, src/pages/_app.tsx for Pages
+        Router, src/App.tsx for CRA) and wrap children with:
+
+          import feedbackConfig from './feedback.config'
+          import { FeedbackProvider } from 'react-visual-feedback'
+          <FeedbackProvider {...feedbackConfig}>{children}</FeedbackProvider>
+
+        For Next Pages Router, use dynamic({ ssr: false }) to skip SSR
+        — styled-components doesn't tolerate SSR without setup.
+
+Step 3. Tell the user to restart `npm run dev` (env-var changes don't
+        hot-reload) and press Alt+A in the browser.
+
+Step 4. Verify with:  npx rvf doctor
+
+Public exports they'll need:
+  - react-visual-feedback             → FeedbackProvider, defineConfig, connect
+  - react-visual-feedback/server      → createFeedbackHandler, devSessionAuth
+  - react-visual-feedback/destinations → local, githubIssue, slack, discord, …
 ```
 
-That's it. `Alt+A` opens the modal. Adding a destination = editing the config file.
+The CLI is the one source of truth for env var names. Adding a
+destination is `npx rvf auth <name>` — never edit `.env.local` manually.
 
-## Try it without a server
+---
+
+## 🚀 Or: try it with no server, no env vars
 
 ```jsx
-import { FeedbackProvider } from 'react-visual-feedback'
-
-<FeedbackProvider dashboard>
-  <YourApp />
-</FeedbackProvider>
+<FeedbackProvider dashboard>{children}</FeedbackProvider>
 ```
 
-No server, no env vars. Feedback lands in browser `localStorage`. Open the bundled `viewer.html` (or copy to `public/`) to see all captured items. Press `Alt+A` to capture, `Alt+Q` for the dashboard.
+Feedback lives in `localStorage`. `Alt+A` to capture, `Alt+Q` to see what's been reported. Useful for: solo demos, "does this widget feel right", or showing teammates.
 
-### View collected feedback (no React app needed)
+To view the local feedback from any browser without re-mounting React,
+serve `node_modules/react-visual-feedback/dist/viewer.html` (or copy it
+to your `public/` folder). It live-reads `localStorage`, supports
+status changes + deletion, and needs no build / server / install.
 
-After the provider has been used, open this URL in any browser:
+### Wiring to your own backend (`dataSource`)
 
+For team setups, point the provider at your API:
+
+```jsx
+<FeedbackProvider
+  dashboard
+  dataSource={{
+    load:      () => fetch('/api/feedback').then(r => r.json()),
+    save:      (item) => fetch('/api/feedback', { method: 'POST', body: JSON.stringify(item) }),
+    remove:    (id) => fetch(`/api/feedback/${id}`, { method: 'DELETE' }),
+    subscribe: (cb) => { /* optional: SSE / WebSocket */ return () => {}; },
+  }}
+/>
 ```
-file:///path/to/your/project/node_modules/react-visual-feedback/dist/viewer.html
-```
 
-…or serve `dist/viewer.html` from your project's `public/` folder so anyone on your team can hit `https://your-app.com/viewer.html` to see what's been reported. The viewer reads from this browser's `localStorage` (same key the widget writes to), live-refreshes on focus, supports status changes and deletion. No build, no server, no install.
-
-### Where the data lives
-
-- **Default:** the browser's `localStorage` under key `react-feedback-data`.
-- **Server too (optional, recommended for teams):** pass a `dataSource` prop and the widget writes to your backend in addition to local storage:
-  ```jsx
-  <FeedbackProvider
-    dashboard
-    dataSource={{
-      load:    () => fetch('/api/feedback').then(r => r.json()),
-      save:    (item) => fetch('/api/feedback', { method: 'POST', body: JSON.stringify(item) }),
-      remove:  (id) => fetch(`/api/feedback/${id}`, { method: 'DELETE' }),
-      subscribe: (cb) => { /* optional: live updates via SSE/WebSocket */ return () => {}; },
-    }}
-  />
-  ```
-  The viewer also picks up `dataSource` when you mount it in your own React app.
+`dataSource` and destinations work together — destinations fan-out at
+submit-time, `dataSource` keeps the dashboard's list in sync.
 
 ## Wiring a single destination by hand (advanced)
 

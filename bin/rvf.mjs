@@ -133,12 +133,12 @@ const DESTINATIONS = [
 ];
 
 const MODAL_VARIANTS = [
-  { id: 'two-column', label: 'two-column', blurb: 'form left, evidence right — RECOMMENDED' },
+  { id: 'centered',   label: 'centered',   blurb: 'classic centered modal — RECOMMENDED' },
+  { id: 'two-column', label: 'two-column', blurb: 'form left, evidence right (paste/drop/voice memo)' },
   { id: 'workspace',  label: 'workspace',  blurb: 'step rail + impact map + annotation pins' },
   { id: 'stepper',    label: 'stepper',    blurb: '3-step wizard (Describe → Tag → Send)' },
   { id: 'drawer',     label: 'drawer',     blurb: 'slide-out from right edge' },
   { id: 'compact',    label: 'compact',    blurb: '320px chat-style card, bottom-right' },
-  { id: 'centered',   label: 'centered',   blurb: 'classic centered modal' },
 ];
 
 const FRAMEWORKS = {
@@ -227,7 +227,8 @@ function buildConfigTs({ destIds, variant }) {
     .map((d) => `    ${d.call},`)
     .join('\n');
 
-  return `import { defineConfig, connect } from 'react-visual-feedback'
+  return `import { defineConfig } from 'react-visual-feedback/config'
+import { connect } from 'react-visual-feedback/destinations'
 
 /**
  * Feedback config — single source of truth for both browser and server.
@@ -236,6 +237,10 @@ function buildConfigTs({ destIds, variant }) {
  * That's the whole integration.
  *
  * Type \`connect.\` in your editor to see every available destination.
+ *
+ * Note: imports go through /config and /destinations subpaths — these
+ * are pure-JS (no React, no html2canvas), so importing this file from
+ * a server route doesn't drag the entire UI bundle into Node.
  */
 export default defineConfig({
   destinations: [
@@ -352,7 +357,7 @@ async function cmdInit(flags = []) {
       console.log(`  Available: ${DESTINATIONS.map((d) => d.id).join(', ')}`);
       process.exit(1);
     }
-    variant = parseFlag(flags, 'variant') || 'two-column';
+    variant = parseFlag(flags, 'variant') || 'centered';
     if (!MODAL_VARIANTS.find((v) => v.id === variant)) {
       console.log(paint(`✗ Unknown variant: ${variant}`, c.red));
       console.log(`  Available: ${MODAL_VARIANTS.map((v) => v.id).join(', ')}`);
@@ -382,7 +387,7 @@ async function cmdInit(flags = []) {
         variant: () => select({
           message: 'Default modal layout:',
           options: MODAL_VARIANTS.map((v) => ({ value: v.id, label: v.label, hint: v.blurb })),
-          initialValue: 'two-column',
+          initialValue: 'centered',
         }),
         confirmEnvStubs: () => confirm({
           message: `Append env var stubs to ${fw.envFile}?`,
@@ -710,7 +715,7 @@ ${paint('react-visual-feedback CLI', c.cyan + c.bold)}
 
   ${paint('npx rvf init', c.green)}              ${paint('— interactive setup (config + route + env stubs)', c.gray)}
   ${paint('npx rvf init --yes', c.green)}        ${paint('— non-interactive (for CI / scripts)', c.gray)}
-       ${paint('--destinations=local,github   --variant=two-column   --no-env', c.gray)}
+       ${paint('--destinations=local,github   --variant=centered   --no-env', c.gray)}
   ${paint('npx rvf add <name>', c.green)}        ${paint('— add a destination to feedback.config.ts', c.gray)}
   ${paint('npx rvf auth <name>', c.green)}       ${paint('— get a token and write env vars (90-150s per destination)', c.gray)}
        ${paint('--web (hosted OAuth) --no-open --token=… --print-only --env-file=.env', c.gray)}

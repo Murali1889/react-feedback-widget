@@ -1,5 +1,63 @@
 # Changelog
 
+## [2.3.0] — 2026-06-18
+
+Three-minute integration. `npx rvf init --auth <name>` does the whole
+thing in one command: framework auto-detect, scaffold, real-provider
+auth flow, env-var write. Nine destinations end-to-end. Plus a security
+audit pass + dashboard cleanup.
+
+### Added — CLI (`npx rvf`)
+- `npx rvf init --auth <name>` chain: scaffold + auth in one command.
+- `npx rvf <destination>` shortcut (1-arg, no verb) and `rvf c <destination>` alias.
+- `npx rvf` (no args) opens an interactive menu (init/auth/add/doctor/list).
+- `npx rvf doctor` — diagnoses `.env.local` per-destination; flags missing keys + suggests the next command.
+- `npx rvf auth <name>` — paste-flow for github/jira/linear/supabase/discord/slack, polling flow for notion, scope-coached flow for hubspot, OAuth-loopback + auto-create-spreadsheet for sheets.
+- `npx rvf auth github --web` — routes through our hosted OAuth website (lives in `website/`), CLI loopback handoff with a per-flow handoff secret + Private Network Access CORS.
+
+### Added — evidence intake
+- **Paste** (Cmd+V in the description textarea) — extracts image clipboard items and routes them to the screenshot slot.
+- **Drag-drop** — full-modal dropzone with a "Drop to attach" overlay; ingests any file type.
+- **Voice memo** — `useVoiceRecorder` hook, mic-only `MediaRecorder` with best-MIME pick, 90s auto-stop. Releases the mic track on stop + unmount.
+- **Arbitrary files** — `accept="image/*,video/*"` removed from every modal variant. PDFs, logs, HAR, zip selectable through the file picker.
+- New `audioBlob` payload field threads through the multipart pipeline (`audio` part) and server-side `parseWebRequestBody`.
+
+### Added — destinations
+- New `connect.discord()` destination + `createDiscordHandler` — multipart upload bundles screenshot + video + audio + arbitrary file as `files[0..N]` (Discord allows up to 10).
+- Other destinations (github, linear, notion, hubspot, slack) append a `📎 Evidence captured: …` note to the body so the receiver sees what was attached even when the API can't carry binaries.
+
+### Security (closed all HIGH + MEDIUM audit findings)
+- **CLI web-loopback handoff secret.** Server only resolves on `/handoff/<32-byte-hex>`; timing-safe compare; OPTIONS+POST only; body capped at 64KB. Closes the window where any local process could race the legitimate browser to POST a fabricated token.
+- **Pinned production website URL.** CLI defaults to `https://rvf.dev` instead of `http://localhost:3009`; dev users opt in to localhost via `RVF_WEBSITE_URL`.
+- **OAUTH_STATE_SECRET length floor (≥32 chars).** `encodeState`/`decodeState` throw on short secrets. State payload now carries `iat`; `decodeState` rejects > 10 min.
+- **`createSheetsHandler` refuses unwrapped calls in production.** Closes the unauthenticated `getAuthUrl`/`exchangeCode` action path.
+- **Screenshot PII masking.** `html2canvas` `onclone` hook strips `input[type=password]`, every `cc-*` autocomplete shape, `one-time-code`, name-matched card/cvv/cvc, and explicit `[data-feedback-redact]` elements.
+- **CSRF rule clarified** — required when a cookie session is in play; skipped for bearer-only and unauthenticated requests (browsers can't implicitly attach non-cookie credentials).
+- **Serverless runtime detection** — `defaultRateLimiter` emits a one-shot warning on Vercel/Lambda/Cloud Run/Functions/Netlify/Workers/Pages/Deno so hosts don't silently assume 30/hour is enforced on cold-start environments.
+- **Cookie `secure` flag forced** in production regardless of `req.protocol` (TLS-terminating-proxy fix).
+- **Inline-script credential injection hardened** — `safeJsonForScript` escapes `</script>` / U+2028 / U+2029 / `<!--`. Callback page adds CSP + Referrer-Policy + X-Content-Type-Options.
+
+### Dashboard cleanup
+- Replaced `window.prompt()` in `OwnerRow` + `CustomerRow` with inline theme-styled inputs (Enter commits, Esc cancels, datalist for recent names).
+- Responsive layout — three @media breakpoints. Below 1024px the workflow column collapses into a 40vh bottom sheet; below 768px it hides and the body becomes a single scrolling column.
+- Severity filter chips (P0/P1/P2/P3) in `SummaryBar` — the reducer + filter logic existed but no UI dispatched to it.
+- `TriageListRow` no longer renders `item.feedback` twice (title + preview).
+- Sort dropdown — Newest / Oldest / Priority / Status.
+- Footer shows "X of Y items" when filters narrow the list.
+- Deleted `dashboard/legacy/FeedbackDashboardLegacy.jsx` (1068 LOC). Extracted `DEFAULT_STATUSES` + `saveFeedbackToLocalStorage` + IndexedDB video helpers into the focused `src/lib/feedbackStorage.js`.
+
+### Fixed
+- **Server route no longer drags the 4.4 MB UI bundle into Node.** `connect` is now re-exported from `react-visual-feedback/destinations` (27 KB pure JS, no React/html2canvas). The CLI's generated `feedback.config.ts` and the catch-all route imports use `react-visual-feedback/config` + `react-visual-feedback/destinations` instead of the root entry, which closes the "all `/api/feedback/*` return 500" path some hosts saw on Next.js.
+
+### Breaking
+- Server reads only `GITHUB_TOKEN` / `GITHUB_REPO`. The previous `GH_TOKEN` / `GH_REPO` fallback is removed — run `npx rvf auth github` to migrate, or rename the env vars manually.
+
+### Default modal variant changed
+- `npx rvf init` now scaffolds `ui: { variant: 'centered' }` (the classic centered modal) instead of `two-column`. Hosts who want the new paste/drop/voice-memo UX can explicitly opt in with `--variant=two-column`.
+
+### Tests
+- 693 tests pass (was 615 before this batch).
+
 ## [Unreleased]
 
 ### Added
