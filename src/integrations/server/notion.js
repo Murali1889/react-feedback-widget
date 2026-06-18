@@ -9,7 +9,7 @@
  * Env: NOTION_TOKEN, NOTION_DB_ID
  */
 
-import { warnIfInsecureFactory } from './_shared.js';
+import { warnIfInsecureFactory, buildEvidenceNote } from './_shared.js';
 
 const warnIfInsecure = warnIfInsecureFactory('createNotionHandler');
 
@@ -28,7 +28,8 @@ function buildPageProperties(feedbackData, titleProperty) {
 }
 
 function buildChildren(feedbackData) {
-  const body = feedbackData.aiTicket?.markdown || feedbackData.feedback || '';
+  const body = (feedbackData.aiTicket?.markdown || feedbackData.feedback || '')
+    + buildEvidenceNote(feedbackData);
   // Notion blocks have a 2000-char max per rich_text run; chunk safely.
   const chunks = body.match(/[\s\S]{1,1800}/g) || [''];
   return chunks.map((c) => ({

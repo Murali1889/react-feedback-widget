@@ -11,7 +11,7 @@
  *   P0/critical → red    P1/high → orange    P2/medium → yellow    P3/low → grey
  */
 
-import { warnIfInsecureFactory } from './_shared.js';
+import { warnIfInsecureFactory, buildEvidenceNote } from './_shared.js';
 
 const warnIfInsecure = warnIfInsecureFactory('createSlackHandler');
 
@@ -26,7 +26,7 @@ function buildMessage(feedbackData) {
   const title = (feedbackData.feedback || 'Feedback').slice(0, 150);
   const sev   = feedbackData.severity || feedbackData.priority || 'P2';
   const color = COLOR[sev] || '#94a3b8';
-  const md    = feedbackData.aiTicket?.markdown || feedbackData.feedback || '';
+  const md    = (feedbackData.aiTicket?.markdown || feedbackData.feedback || '') + buildEvidenceNote(feedbackData);
   const url   = feedbackData.url || null;
   const user  = feedbackData.userName || 'someone';
 

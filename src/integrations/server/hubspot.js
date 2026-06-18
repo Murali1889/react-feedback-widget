@@ -15,7 +15,7 @@
  * P2/medium → MEDIUM, P3/low → LOW.
  */
 
-import { warnIfInsecureFactory } from './_shared.js';
+import { warnIfInsecureFactory, buildEvidenceNote } from './_shared.js';
 
 const warnIfInsecure = warnIfInsecureFactory('createHubspotHandler');
 
@@ -26,7 +26,8 @@ const PRIORITY = {
 
 async function createTicket({ token, pipeline, stage, feedbackData }) {
   const subject = (feedbackData.feedback || 'Feedback').slice(0, 120);
-  const content = feedbackData.aiTicket?.markdown || feedbackData.feedback || '(no description)';
+  const content = (feedbackData.aiTicket?.markdown || feedbackData.feedback || '(no description)')
+    + buildEvidenceNote(feedbackData);
   const sev = feedbackData.severity || feedbackData.priority;
   const priority = PRIORITY[sev] || 'MEDIUM';
 

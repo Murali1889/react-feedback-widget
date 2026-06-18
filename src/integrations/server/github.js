@@ -24,7 +24,7 @@
  *   })(createGithubHandler({}));
  */
 
-import { warnIfInsecureFactory } from './_shared.js';
+import { warnIfInsecureFactory, buildEvidenceNote } from './_shared.js';
 
 const warnIfInsecure = warnIfInsecureFactory('createGithubHandler');
 
@@ -37,7 +37,7 @@ function bodyFor(feedbackData) {
     feedbackData.url ? `\n\n— Reported on ${feedbackData.url}` : '',
     feedbackData.userName ? ` by ${feedbackData.userName}` : '',
   ].join('').trim();
-  const body = aiMarkdown || fallbackBody || '(no description)';
+  const body = (aiMarkdown || fallbackBody || '(no description)') + buildEvidenceNote(feedbackData);
   const labels = Array.isArray(feedbackData.labels) ? feedbackData.labels.slice(0, 10) : [];
   if (severity) labels.push(`severity:${severity}`);
   if (feedbackData.type) labels.push(`type:${feedbackData.type}`);

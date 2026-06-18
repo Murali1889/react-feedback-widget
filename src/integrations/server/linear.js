@@ -9,7 +9,7 @@
  * Maps severity -> Linear priority (1=Urgent, 2=High, 3=Medium, 4=Low).
  */
 
-import { warnIfInsecureFactory } from './_shared.js';
+import { warnIfInsecureFactory, buildEvidenceNote } from './_shared.js';
 
 const warnIfInsecure = warnIfInsecureFactory('createLinearHandler');
 
@@ -24,7 +24,8 @@ const CREATE_ISSUE_GQL = `mutation IssueCreate($input: IssueCreateInput!) {
 
 async function createIssue({ token, teamId, feedbackData }) {
   const title = (feedbackData.feedback || 'Feedback').slice(0, 80);
-  const description = feedbackData.aiTicket?.markdown || feedbackData.feedback || '(no description)';
+  const description = (feedbackData.aiTicket?.markdown || feedbackData.feedback || '(no description)')
+    + buildEvidenceNote(feedbackData);
   const priority = SEVERITY_TO_PRIORITY[feedbackData.severity || feedbackData.priority] ?? 3;
 
   const res = await fetch('https://api.linear.app/graphql', {
