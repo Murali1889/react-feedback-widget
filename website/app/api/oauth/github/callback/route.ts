@@ -18,6 +18,7 @@ import {
   credentialsConfigured,
 } from '@/lib/credentials/github';
 import { decodeState, isAllowedLoopback } from '@/lib/state';
+import { safeJsonForScript } from '@/lib/script-safe-json';
 
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 
@@ -98,8 +99,11 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Browser handoff — short-lived cookie + redirect
+  // Browser handoff — short-lived cookie + redirect.
+  // Force `secure` in production regardless of req.nextUrl.protocol —
+  // TLS-terminating proxies in front of Next often forward as http.
   const res = NextResponse.redirect(new URL('/connect/github/done', req.url));
+  const inProd = process.env.NODE_ENV === 'production';
   res.cookies.set('rvf_token_handoff', JSON.stringify({
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token || '',
@@ -107,7 +111,7 @@ export async function GET(req: NextRequest) {
     issued_at: Date.now(),
   }), {
     httpOnly: true,
-    secure: req.nextUrl.protocol === 'https:',
+    secure: inProd || req.nextUrl.protocol === 'https:',
     sameSite: 'lax',
     path: '/connect/github',
     maxAge: 60,
@@ -135,14 +139,16 @@ function loopbackBouncePage(opts: {
   refreshToken: string;
   login: string;
 }) {
-  // Inline JS POSTs the credentials to the CLI's loopback. We don't
-  // include the secrets in markup the user might screenshot — they live
-  // inside the inline payload which is consumed and discarded.
-  const payload = JSON.stringify({
+  // Inline JS POSTs the credentials to the CLI's loopback. JSON.stringify
+  // alone is NOT safe inside a <script> tag — `</script>` inside any value
+  // would break out, and U+2028/U+2029 would terminate the statement.
+  // safeJsonForScript escapes those.
+  const payload = safeJsonForScript({
     GITHUB_TOKEN: opts.accessToken,
     GITHUB_REFRESH_TOKEN: opts.refreshToken,
     GITHUB_LOGIN: opts.login,
   });
+  const callbackUrl = safeJsonForScript(opts.callback);
   const html = `<!doctype html><html><head><title>Connected</title>
 <meta charset="utf-8"></head>
 <body style="font-family: system-ui; max-width: 480px; margin: 80px auto; text-align: center; color: #e2e8f0; background: #0b1220;">
@@ -151,10 +157,10 @@ function loopbackBouncePage(opts: {
 <script>
 (async () => {
   try {
-    const r = await fetch(${JSON.stringify(opts.callback)}, {
+    const r = await fetch(${callbackUrl}, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: ${JSON.stringify(payload)},
+      body: JSON.stringify(${payload}),
       mode: 'cors',
     });
     if (!r.ok) throw new Error('CLI returned ' + r.status);
@@ -168,9 +174,28 @@ function loopbackBouncePage(opts: {
 })();
 </script>
 </body></html>`;
+  // CSP: the inline script needs `unsafe-inline` (we ship one inline
+  // bundle) but everything else is locked down. No external scripts,
+  // no remote stylesheets, no images, no frames. Only the fetch to the
+  // loopback (a `connect-src 'self' http://127.0.0.1:* http://localhost:*`)
+  // is permitted.
+  const csp = [
+    "default-src 'none'",
+    "script-src 'unsafe-inline'",
+    "style-src 'unsafe-inline'",
+    "connect-src 'self' http://127.0.0.1:* http://localhost:*",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join('; ');
   return new Response(html, {
     status: 200,
-    headers: { 'content-type': 'text/html; charset=utf-8' },
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'content-security-policy': csp,
+      'referrer-policy': 'no-referrer',
+      'x-content-type-options': 'nosniff',
+    },
   });
 }
 
@@ -179,3 +204,5 @@ function escapeHtml(s: string): string {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c)
   );
 }
+
+

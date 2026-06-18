@@ -42,9 +42,60 @@ function createInMemoryRateLimiter({ limit = 30, windowMs = 60 * 60 * 1000 } = {
   return fn;
 }
 
-const sharedLimiter = createInMemoryRateLimiter();
-sharedLimiter.create = (opts) => createInMemoryRateLimiter(opts);
-export const defaultRateLimiter = sharedLimiter;
+/**
+ * Heuristic detection of cold-start-every-request hosting (Vercel
+ * functions, AWS Lambda, Cloudflare Workers, Netlify Functions, GCP
+ * Cloud Run / Cloud Functions). On these platforms a module-singleton
+ * in-memory Map resets at each cold start, so the default limiter
+ * silently degrades to "essentially unlimited" — worse than no limiter
+ * because hosts believe they're protected.
+ */
+export function isServerlessRuntime() {
+  if (typeof process === 'undefined' || !process.env) return false;
+  return Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.AWS_EXECUTION_ENV ||
+    process.env.NETLIFY ||
+    process.env.K_SERVICE ||                    // Cloud Run / Cloud Functions Gen2
+    process.env.FUNCTION_TARGET ||              // Cloud Functions Gen1
+    process.env.CF_PAGES ||                     // Cloudflare Pages
+    process.env.CF_WORKER ||                    // Workers (custom marker)
+    process.env.DENO_DEPLOYMENT_ID              // Deno Deploy
+  );
+}
+
+let _serverlessWarned = false;
+function warnServerlessLimiter() {
+  if (_serverlessWarned) return;
+  _serverlessWarned = true;
+  if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn(
+      '[react-visual-feedback] defaultRateLimiter is in-memory and ' +
+      'resets on every cold start. Detected a serverless runtime — ' +
+      'pass an external limiter (Upstash / Redis / Durable Object) ' +
+      'via `withSecureDefaults({ rateLimit })` to actually enforce limits.'
+    );
+  }
+}
+
+function buildSharedLimiter() {
+  const limiter = createInMemoryRateLimiter();
+  if (isServerlessRuntime()) {
+    const original = limiter;
+    const fn = async (reqLike, ctx) => {
+      warnServerlessLimiter();
+      return original(reqLike, ctx);
+    };
+    fn.reset = original.reset;
+    fn.create = (opts) => createInMemoryRateLimiter(opts);
+    return fn;
+  }
+  limiter.create = (opts) => createInMemoryRateLimiter(opts);
+  return limiter;
+}
+
+export const defaultRateLimiter = buildSharedLimiter();
 
 const CODE_STATUS = {
   unauthorized: 401,

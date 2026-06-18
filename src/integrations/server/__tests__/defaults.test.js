@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   defaultOriginValidator,
   defaultRateLimiter,
   defaultErrorNormalizer,
+  isServerlessRuntime,
 } from '../defaults.js';
 
 const reqWith = (origin, host, ip = '1.1.1.1') => ({ origin, headers: { host }, ip });
@@ -57,6 +58,36 @@ describe('defaultRateLimiter', () => {
       limiter({ ip: '3.3.3.3', headers: {} }, { userId: 'u2' })
     ).resolves.toBeUndefined();
   });
+});
+
+describe('isServerlessRuntime', () => {
+  const SENTINELS = [
+    'VERCEL', 'AWS_LAMBDA_FUNCTION_NAME', 'AWS_EXECUTION_ENV',
+    'NETLIFY', 'K_SERVICE', 'FUNCTION_TARGET',
+    'CF_PAGES', 'CF_WORKER', 'DENO_DEPLOYMENT_ID',
+  ];
+  const original = {};
+
+  beforeEach(() => {
+    SENTINELS.forEach((k) => { original[k] = process.env[k]; delete process.env[k]; });
+  });
+  afterEach(() => {
+    SENTINELS.forEach((k) => {
+      if (original[k] === undefined) delete process.env[k];
+      else process.env[k] = original[k];
+    });
+  });
+
+  it('returns false in a clean Node environment', () => {
+    expect(isServerlessRuntime()).toBe(false);
+  });
+
+  for (const sentinel of ['VERCEL', 'AWS_LAMBDA_FUNCTION_NAME', 'NETLIFY', 'K_SERVICE', 'DENO_DEPLOYMENT_ID']) {
+    it(`detects ${sentinel}`, () => {
+      process.env[sentinel] = '1';
+      expect(isServerlessRuntime()).toBe(true);
+    });
+  }
 });
 
 describe('defaultErrorNormalizer', () => {
