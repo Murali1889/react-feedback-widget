@@ -21,19 +21,19 @@ const Backdrop = styled.div`
 `;
 const Panel = styled.div`
   position: absolute; top: 0; right: 0; bottom: 0;
-  width: min(1280px, 96vw);
+  width: min(1080px, 88vw);
   background: ${pickToken('color.bg')};
   border-left: 1px solid ${pickToken('color.border')};
   border-radius: 14px 0 0 14px;
   box-shadow: -20px 0 50px rgba(28,25,23,0.18);
   display: grid;
-  grid-template-rows: 56px auto 1fr 36px;
-  grid-template-columns: 340px minmax(420px, 1fr);
+  grid-template-rows: 52px auto 1fr 32px;
+  grid-template-columns: 300px minmax(380px, 1fr);
 
   @media (max-width: 1024px) {
     width: 100vw;
     border-radius: 0;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 280px 1fr;
   }
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -52,11 +52,11 @@ const SummarySlot = styled.div`grid-column: 1 / -1;`;
 const Body = styled.div`
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 340px minmax(420px, 1fr);
+  grid-template-columns: 300px minmax(380px, 1fr);
   min-height: 0;
 
   @media (max-width: 1024px) {
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 280px 1fr;
   }
   @media (max-width: 768px) {
     grid-template-columns: 1fr;

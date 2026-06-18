@@ -23,7 +23,9 @@ export function getFeedbackEvidenceSummary(item = {}) {
   const logs = Array.isArray(item.eventLogs) ? item.eventLogs : [];
   return {
     hasScreenshot: !!item.screenshot,
-    hasVideo: !!item.video,
+    hasVideo: !!(item.video || item.videoBlob || item.videoRef),
+    hasAudio: !!(item.audioBlob),
+    hasAttachment: !!(item.attachment?.name || item.attachment instanceof Blob),
     logCount: logs.length,
     errorCount: logs.filter(isErrorLog).length,
     failedNetworkCount: logs.filter(isFailedNetwork).length,

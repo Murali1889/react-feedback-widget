@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.3.3] — 2026-06-18
+
+Live Chrome screenshot caught a wasted-space dashboard. Tighter panel
++ visible media + audio that actually plays.
+
+### Fixed
+- **Image now renders prominently in the dashboard.** Previously the
+  Visual section had a `max-height: 360px` with `cursor: zoom-in` —
+  fine for a thumbnail but useless when the image fills the entire
+  bottom of an otherwise-empty detail panel. Now it gets the full
+  panel width with `object-fit: contain`, `image-rendering: pixelated`
+  so even small test PNGs read correctly, and a `min-height: 80px`
+  guarantees it's never invisible.
+- **Audio voice memos now actually play.** Previously `audioBlob` was
+  stored as metadata-only and the Blob was lost on persistence.
+  Now persisted to IndexedDB (same store as video) with `audioRef`
+  pointer; VisualSection loads it and renders an inline `<audio controls>`.
+- **`With media` counter recognizes every kind of evidence.** Was only
+  counting `screenshot || video`. Now includes audio + arbitrary
+  attachment too. `getFeedbackEvidenceSummary` exposes `hasAudio` +
+  `hasAttachment`; filtering.js consumes both.
+- **Dashboard panel is 88vw / max 1080px** (was 96vw / max 1280px).
+  ~10% less empty real-estate, list column tightened from 340→300px,
+  detail column from minmax(420)→minmax(380). Removed extra outer
+  padding on the panel.
+
+### Changed
+- VisualSection summary now reads `screenshot · video · audio` instead
+  of the old `'1 screenshot'` / `'1 video'` text.
+
 ## [2.3.2] — 2026-06-18
 
 Driven by a live end-to-end Chrome test pass (47 cases, see test.csv).

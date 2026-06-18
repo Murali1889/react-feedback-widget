@@ -78,11 +78,17 @@ export async function saveFeedbackToLocalStorage(feedbackData) {
       };
     }
     if (feedbackData.audioBlob && feedbackData.audioBlob instanceof Blob) {
+      // Persist the binary to IndexedDB (same store as video) so the
+      // dashboard can play it back. Store metadata in localStorage with
+      // an audioRef pointer to the IDB row.
+      const audioId = `${feedbackId}-audio`;
+      const saved = await saveVideoToIndexedDB(audioId, feedbackData.audioBlob);
       processedData.audioBlob = {
         name: feedbackData.audioBlob.name || 'voice-memo.webm',
         size: feedbackData.audioBlob.size,
         type: feedbackData.audioBlob.type || 'audio/webm',
         persistedAt: new Date().toISOString(),
+        audioRef: saved ? audioId : null,
       };
     }
 

@@ -18,7 +18,7 @@ function matchesFlags(item, flags) {
   if (!flags || flags.size === 0) return true;
   const summary = getFeedbackEvidenceSummary(item);
   for (const flag of flags) {
-    if (flag === 'withMedia' && !(summary.hasVideo || summary.hasScreenshot)) return false;
+    if (flag === 'withMedia' && !(summary.hasVideo || summary.hasScreenshot || summary.hasAudio || summary.hasAttachment)) return false;
     if (flag === 'hasErrors' && !(summary.errorCount > 0 || summary.failedNetworkCount > 0)) return false;
     if (flag === 'needsOwner' && item.owner) return false;
   }
@@ -50,7 +50,7 @@ export function getAttentionCounts(items) {
   let withMedia = 0, hasErrors = 0, needsOwner = 0;
   for (const it of items || []) {
     const s = getFeedbackEvidenceSummary(it);
-    if (s.hasVideo || s.hasScreenshot) withMedia += 1;
+    if (s.hasVideo || s.hasScreenshot || s.hasAudio || s.hasAttachment) withMedia += 1;
     if (s.errorCount > 0 || s.failedNetworkCount > 0) hasErrors += 1;
     if (!it.owner) needsOwner += 1;
   }
